@@ -1,5 +1,5 @@
-const concat = require('simple-concat')
 const get = require('../')
+const concat = get.simpleConcat
 const http = require('http')
 const querystring = require('querystring')
 const str = require('string-to-stream')

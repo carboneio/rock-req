@@ -1,5 +1,5 @@
-const concat = require('simple-concat')
 const get = require('../')
+const concat = get.simpleConcat
 const http = require('http')
 const selfSignedHttps = require('self-signed-https')
 const test = require('tape')

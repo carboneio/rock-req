@@ -1,11 +1,9 @@
 /*! simple-get. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
 module.exports = simpleGet
 
-const concat = require('simple-concat')
 const decompressResponse = require('decompress-response') // excluded from browser build
 const http = require('http')
 const https = require('https')
-const once = require('once')
 const querystring = require('querystring')
 const url = require('url')
 
@@ -13,7 +11,6 @@ const isStream = o => o !== null && typeof o === 'object' && typeof o.pipe === '
 
 function simpleGet (opts, cb) {
   opts = Object.assign({ maxRedirects: 10 }, typeof opts === 'string' ? { url: opts } : opts)
-  cb = once(cb)
 
   if (opts.url) {
     const { hostname, port, protocol, auth, path } = url.parse(opts.url) // eslint-disable-line node/no-deprecated-api
@@ -72,11 +69,11 @@ function simpleGet (opts, cb) {
     cb(null, tryUnzip ? decompressResponse(res) : res)
   })
   req.on('timeout', () => {
-    req.abort()
-    cb(new Error('Request timed out'))
+    // we must destroy manually. The error even will be fired.
+    // https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_http_request_url_options_callback
+    req.destroy(new Error('Request timed out'))
   })
-  req.on('error', cb)
-
+  req.on('error',  cb);
   if (isStream(body)) body.on('error', cb).pipe(req)
   else req.end(body)
 
@@ -86,7 +83,7 @@ function simpleGet (opts, cb) {
 simpleGet.concat = (opts, cb) => {
   return simpleGet(opts, (err, res) => {
     if (err) return cb(err)
-    concat(res, (err, data) => {
+    simpleConcat(res, (err, data) => {
       if (err) return cb(err)
       if (opts.json) {
         try {
@@ -106,3 +103,21 @@ simpleGet.concat = (opts, cb) => {
     return simpleGet(Object.assign({ method: method.toUpperCase() }, opts), cb)
   }
 })
+
+
+function simpleConcat (stream, cb) {
+  var chunks = []
+  stream.on('data', function (chunk) {
+    chunks.push(chunk)
+  })
+  stream.once('end', function () {
+    if (cb) cb(null, Buffer.concat(chunks))
+    cb = null
+  })
+  stream.once('error', function (err) {
+    if (cb) cb(err)
+    cb = null
+  })
+}
+
+simpleGet.simpleConcat = simpleConcat;
