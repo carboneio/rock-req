@@ -16,6 +16,7 @@
 This module is the lightest possible wrapper on top of node.js `http`, but supporting these essential features:
 
 - follows redirects
+- automatically retries on error
 - automatically handles gzip/deflate responses
 - supports HTTPS
 - supports specifying a timeout
@@ -327,6 +328,47 @@ function processResult (err, res, data) {
   console.log(data.toString())
 }
 ```
+
+### Retry on errors
+
+By default, Hareq retries with the following errors.
+
+```js 
+const get = require('simple-get');
+// Retry errors can be customized globaly, and deactivated per request with maxRetry : 0
+get.retryOn = {
+  statusCodes: [
+    408, /* Request Timeout */
+    429, /* Too Many Requests */
+    500, /* Internal Server Error */
+    502, /* Bad Gateway */
+    503, /* Service Unavailable */
+    504, /* Gateway Timeout*/
+    521, /* Web Server Is Down*/
+    522, /* Cloudflare Connection Timed Out */
+    524  /* Cloudflare A Timeout Occurred */
+  ],
+  errorCodes: [
+    'ETIMEDOUT', /* One of the timeout limits was reached. */
+    'ECONNRESET', /* The connection was forcibly closed. */
+    'EADDRINUSE', /* Could not bind to any free port */
+    'ECONNREFUSED', /* The connection was refused by the server. */
+    'EPIPE', /* The remote side of the stream being written has been closed. */
+    'ENOTFOUND', /* Could not resolve the hostname to an IP address. */
+    'ENETUNREACH', /*  No internet connection. */
+    'EAI_AGAIN' /* DNS lookup timed out. */
+  ]
+};
+
+const opts = {
+  url: 'http://example.com',
+  body: 'this is the POST body',
+  maxRetry: 2 // default value. 0 = deactivate retry
+}
+get.post(opts, function (err, res) { });
+
+```
+
 
 ## license
 

@@ -10,7 +10,7 @@ const url = require('url')
 const isStream = o => o !== null && typeof o === 'object' && typeof o.pipe === 'function'
 
 function simpleGet (opts, cb) {
-  opts = Object.assign({ maxRedirects: 10 }, typeof opts === 'string' ? { url: opts } : opts)
+  opts = Object.assign({ maxRedirects: 10, maxRetry: 2 }, typeof opts === 'string' ? { url: opts } : opts)
 
   if (opts.url) {
     const { hostname, port, protocol, auth, path } = url.parse(opts.url) // eslint-disable-line node/no-deprecated-api
@@ -44,6 +44,10 @@ function simpleGet (opts, cb) {
   const originalHost = opts.hostname // hostname before potential redirect
   const protocol = opts.protocol === 'https:' ? https : http // Support http/https urls
   const req = protocol.request(opts, res => {
+    if (res.statusCode > 400 /* speed up */ && simpleGet.retryOn.statusCodes.indexOf(res.statusCode) !== -1 && --opts.maxRetry > 0) {
+      return setTimeout(simpleGet, 100, opts, cb) // retry in 100ms
+    }
+
     if (opts.followRedirects !== false && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       opts.url = res.headers.location // Follow 3xx redirects
       delete opts.headers.host // Discard `host` header on redirect (see #32)
@@ -73,7 +77,14 @@ function simpleGet (opts, cb) {
     // https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_http_request_url_options_callback
     req.destroy(new Error('Request timed out'))
   })
-  req.on('error',  cb);
+  req.once('error',  (e) => {
+    // Force clean-up, because some packages (e.g. nock) don't do this.
+    req.destroy()
+    if (simpleGet.retryOn.errorCodes.indexOf(e.code) !== -1 && --opts.maxRetry > 0) {
+      return setTimeout(simpleGet, 100, opts, cb)  // retry in 100ms
+    }
+    cb(e);
+  });
   if (isStream(body)) body.on('error', cb).pipe(req)
   else req.end(body)
 
@@ -120,4 +131,8 @@ function simpleConcat (stream, cb) {
   })
 }
 
-simpleGet.simpleConcat = simpleConcat;
+simpleGet.simpleConcat = simpleConcat
+simpleGet.retryOn = { 
+  statusCodes : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
+  errorCodes : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ]
+}
