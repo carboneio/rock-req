@@ -75,7 +75,9 @@ function simpleGet (opts, cb) {
   req.on('timeout', () => {
     // we must destroy manually. The error even will be fired.
     // https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_http_request_url_options_callback
-    req.destroy(new Error('Request timed out'))
+    const  _error = new Error('TimeoutError');
+    _error.code = 'ETIMEDOUT';
+    req.destroy(_error)
   })
   req.once('error',  (e) => {
     // Force clean-up, because some packages (e.g. nock) don't do this.

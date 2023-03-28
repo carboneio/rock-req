@@ -58,6 +58,40 @@ test('should retry "maxRetry" max on HTTP code error', function (t) {
   })
 })
 
+test('should retry even if there is an internal timeout', function (t) {
+  t.plan(6)
+  var nbRequestTimeout = 1;
+
+  const server = http.createServer(function (req, res) {
+    t.equal(req.url, '/path')
+    if (nbRequestTimeout === 0) {
+      res.statusCode = 200
+      return res.end('response')
+    }
+    nbRequestTimeout--;
+    setTimeout(function () {
+      // response should not be sent - should timeout before it's sent
+      res.end('response')
+    }, 2000)
+  })
+
+  server.listen(0, function () {
+    const port = server.address().port
+    get({
+      url: 'http://localhost:' + port + '/path',
+      timeout: 1000
+    }, function (err, res) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      concat(res, function (err, data) {
+        t.error(err)
+        t.equal(data.toString(), 'response')
+        server.close()
+      })
+    })
+  })
+})
+
 
 function testRetryOnError(t, errorCode) {
   const server = http.createServer(function (req, res) {
