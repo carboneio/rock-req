@@ -17,6 +17,9 @@ This module is the lightest possible wrapper on top of node.js `http`, but suppo
 
 - follows redirects
 - automatically retries on error
+- create new instance
+- extend with global header, URL rewritting, 
+- composable
 - automatically handles gzip/deflate responses
 - supports HTTPS
 - supports specifying a timeout
@@ -34,6 +37,7 @@ npm install simple-get
 ## usage
 
 Note, all these examples also work in the browser with [browserify](http://browserify.org/).
+
 
 ### simple GET request
 
@@ -331,43 +335,112 @@ function processResult (err, res, data) {
 
 ### Retry on errors
 
-By default, Hareq retries with the following errors.
+By default, simple-get retries with the following errors.
 
 ```js 
 const get = require('simple-get');
-// Retry errors can be customized globaly, and deactivated per request with maxRetry : 0
-get.retryOn = {
-  statusCodes: [
-    408, /* Request Timeout */
-    429, /* Too Many Requests */
-    500, /* Internal Server Error */
-    502, /* Bad Gateway */
-    503, /* Service Unavailable */
-    504, /* Gateway Timeout*/
-    521, /* Web Server Is Down*/
-    522, /* Cloudflare Connection Timed Out */
-    524  /* Cloudflare A Timeout Occurred */
-  ],
-  errorCodes: [
-    'ETIMEDOUT', /* One of the timeout limits was reached. */
-    'ECONNRESET', /* The connection was forcibly closed. */
-    'EADDRINUSE', /* Could not bind to any free port */
-    'ECONNREFUSED', /* The connection was refused by the server. */
-    'EPIPE', /* The remote side of the stream being written has been closed. */
-    'ENOTFOUND', /* Could not resolve the hostname to an IP address. */
-    'ENETUNREACH', /*  No internet connection. */
-    'EAI_AGAIN' /* DNS lookup timed out. */
-  ]
-};
+
+// default values can be overwritten like this:
+get.defaults.retryOnCode = [
+  408, /* Request Timeout */
+  429, /* Too Many Requests */
+  500, /* Internal Server Error */
+  502, /* Bad Gateway */
+  503, /* Service Unavailable */
+  504, /* Gateway Timeout*/
+  521, /* Web Server Is Down*/
+  522, /* Cloudflare Connection Timed Out */
+  524  /* Cloudflare A Timeout Occurred */
+];
+get.defaults.retryOnError = [
+  'ETIMEDOUT', /* One of the timeout limits was reached. */
+  'ECONNRESET', /* The connection was forcibly closed. */
+  'EADDRINUSE', /* Could not bind to any free port */
+  'ECONNREFUSED', /* The connection was refused by the server. */
+  'EPIPE', /* The remote side of the stream being written has been closed. */
+  'ENOTFOUND', /* Could not resolve the hostname to an IP address. */
+  'ENETUNREACH', /*  No internet connection. */
+  'EAI_AGAIN' /* DNS lookup timed out. */
+];
 
 const opts = {
-  url: 'http://example.com',
-  body: 'this is the POST body',
+  url     : 'http://example.com',
+  body    : 'this is the POST body',
   maxRetry: 2 // default value. 0 = deactivate retry
 }
 get.post(opts, function (err, res) { });
 
 ```
+
+### Global options
+
+Change default parameters globally, or create a new instance with specific paramaters (see below)
+
+```js
+get.defaults = {
+  headers       : {},
+  maxRedirects  : 10,
+  maxRetry      : 2,
+  retryDelay    : 100, //ms
+  retryOnCode   : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
+  retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
+  // WARNING: beforeRequest is also called for each retry/redirect
+  beforeRequest : (parsedOpts) => {
+    // parsedOpts is the object parsed by url.parse, with all paramaters of the query
+    parsedOpts.protocol = 'https:';
+    parsedOpts.hostname = 'google.com';
+    parsedOpts.port = 443;
+    parsedOpts.path = '/mypage.html?bla=1';
+    parsedOpts.auth = '';
+    parsedOpts.maxRetry = 2;
+    parsedOpts.maxRedirects = 10;
+    parsedOpts.remainingRetry = 1;
+    parsedOpts.remainingRedirects = 9;
+    // and all paramaters passed, except opts.url.
+    parsedOpts.headers = {};
+    parsedOpts.body = {};
+    parsedOpts.method = {}; //...
+    return parsedOpts;
+  },
+}
+```
+
+### Extend and create new instance
+
+Create a new instance with specific parameters. 
+
+By default, this new instance inherits values of the instance source if options are not overwritten. 
+Internaly, only the first level of the option object is merged with `Object.assign(currentInstanceOption, newOptions)`.
+
+Here is an usage example of `beforeRequest` to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
+
+```js
+const myInstance = get.extend({
+  // WARNING: beforeRequest is also called for each retry/redirect
+  beforeRequest: (parsedOpts) => {
+    const { hostname, port, protocol, path } = parsedOpts;
+    // Replace only on first try (already replaced for second try)
+    if (parsedOpts.maxRetry === parsedOpts.remainingRetry) {
+      parsedOpts.protocol = 'http:';
+      parsedOpts.hostname = '10.0.0.1';
+      parsedOpts.port = 80;
+      parsedOpts.path = `${protocol}/${hostname}/${port}/${path}`;
+    }
+    return parsedOpts;
+  },
+  headers: {
+    'Custom-header': 'x-for-proxy'
+  }
+});
+
+// Then this instance can be used in your app
+myInstance.concat() ...
+
+```
+
+### TODO
+
+- [] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
 
 
 ## license
