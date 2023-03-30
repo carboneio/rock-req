@@ -1,11 +1,12 @@
 /*! simple-get. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
 module.exports = extend()
 
-const decompressResponse = require('decompress-response') // excluded from browser build
 const http = require('http')
 const https = require('https')
 const querystring = require('querystring')
 const url = require('url')
+const zlib = require('zlib')
+const { pipeline , Writable} = require('stream');
 
 const isStream = o => o !== null && typeof o === 'object' && typeof o.pipe === 'function'
 
@@ -35,7 +36,7 @@ function extend(defaultOptions) {
     }
     opts = _default.beforeRequest(opts)
 
-    const headers = { 'accept-encoding': 'gzip, deflate' }
+    const headers = { 'accept-encoding': 'gzip, deflate, br' }
     if (_default.headers) Object.keys(_default.headers).forEach(k => (headers[k.toLowerCase()] = _default.headers[k]))
     if (opts.headers) Object.keys(opts.headers).forEach(k => (headers[k.toLowerCase()] = opts.headers[k]))
     opts.headers = headers
@@ -60,15 +61,37 @@ function extend(defaultOptions) {
 
     const originalHost = opts.hostname // hostname before potential redirect
     const protocol = opts.protocol === 'https:' ? https : http // Support http/https urls
+    const chunks = [];
+    let silenceError = false;
+    let response = null;
+    function onRequestEnd(err) {
+      silenceError = true;
+      if (_default.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
+        return setTimeout(simpleGet, _default.retryDelay, opts, cb)  // retry in 100ms
+      }
+      if (err) return cb(err)
+      let data = Buffer.concat(chunks);
+      if (opts.json) {
+        try { data = JSON.parse(data.toString()) }
+        catch (e) { return cb(e, response, data) }
+      }
+      // TODO test if reponse = null ????
+      cb(null, response, data)
+    }
     const req = protocol.request(opts, res => {
+      // retry and leave
       if (res.statusCode > 400 /* speed up */ && _default.retryOnCode.indexOf(res.statusCode) !== -1 && --opts.remainingRetry > 0) {
-        return setTimeout(simpleGet, _default.retryDelay, opts, cb) // retry in 100ms
+        silenceError = true // req.removeListener('error', onRequestEnd); // TODO emitter.removeListener('close', listener)#
+        res.resume() // Discard response, consume data until the end to free up memory
+        return setTimeout(simpleGet, _default.retryDelay, opts, cb) // retry later
       }
 
+      // or redirect and leave
       if (opts.followRedirects !== false && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        silenceError = true // req.removeListener('error', onRequestEnd); // TODO emitter.removeListener('close', listener)#
+        res.resume() // Discard response, consume data until the end to free up memory
         opts.url = res.headers.location // Follow 3xx redirects
         delete opts.headers.host // Discard `host` header on redirect (see #32)
-        res.resume() // Discard response
 
         const redirectHost = url.parse(opts.url).hostname // eslint-disable-line node/no-deprecated-api
         // If redirected host is different than original host, drop headers to prevent cookie leak (#73)
@@ -82,50 +105,44 @@ function extend(defaultOptions) {
           delete opts.headers['content-length']; delete opts.headers['content-type']
         }
 
-        if (opts.remainingRedirects-- === 0) return cb(new Error('too many redirects'))
+        if (opts.remainingRedirects-- === 0) return onRequestEnd(new Error('too many redirects'))
         else return simpleGet(opts, cb)
       }
 
-      const tryUnzip = typeof decompressResponse === 'function' && opts.method !== 'HEAD'
-      cb(null, tryUnzip ? decompressResponse(res) : res)
+      // or read response
+      response = res;
+      const contentEncoding = opts.method !== 'HEAD' ? (res.headers['content-encoding'] || '').toLowerCase() : '';
+      const output = new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } })
+      switch (contentEncoding) {
+        case 'br':
+          pipeline(res, zlib.createBrotliDecompress(), output, onRequestEnd); break;
+        case 'gzip':
+        case 'deflate':
+          pipeline(res, zlib.createUnzip(), output, onRequestEnd); break;
+        default:
+          pipeline(res, output, onRequestEnd); break;
+      }
     })
-    req.on('timeout', () => {
+    req.once('timeout', () => {
       // we must destroy manually. The error even will be fired to call the callback.
       // https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_http_request_url_options_callback
-      const  _error = new Error('TimeoutError');
-      _error.code = 'ETIMEDOUT';
+      const _error = new Error('TimeoutError'); _error.code = 'ETIMEDOUT';
       req.destroy(_error)
     })
     req.once('error',  (e) => {
+      if (silenceError === false) {
+        onRequestEnd(e)
+      }
       // Force clean-up, because some packages (e.g. nock) don't do this.
       req.destroy()
-      if (_default.retryOnError.indexOf(e.code) !== -1 && --opts.remainingRetry > 0) {
-        return setTimeout(simpleGet, _default.retryDelay, opts, cb)  // retry in 100ms
-      }
-      cb(e);
     });
+    // TODO maage stream  body
     if (isStream(body)) body.on('error', cb).pipe(req)
     else req.end(body)
 
-    return req
+    return req /// TODO remove ?
   }
 
-  simpleGet.concat = (opts, cb) => {
-    return simpleGet(opts, (err, res) => {
-      if (err) return cb(err)
-      simpleConcat(res, (err, data) => {
-        if (err) return cb(err)
-        if (opts.json) {
-          try {
-            data = JSON.parse(data.toString())
-          } catch (err) {
-            return cb(err, res, data)
-          }
-        }
-        cb(null, res, data)
-      })
-    })
-  }
 
   ;['get', 'post', 'put', 'patch', 'head', 'delete'].forEach(method => {
     simpleGet[method] = (opts, cb) => {
@@ -133,23 +150,7 @@ function extend(defaultOptions) {
       return simpleGet(Object.assign({ method: method.toUpperCase() }, opts), cb)
     }
   })
-
-  function simpleConcat (stream, cb) {
-    var chunks = []
-    stream.on('data', function (chunk) {
-      chunks.push(chunk)
-    })
-    stream.once('end', function () {
-      if (cb) cb(null, Buffer.concat(chunks))
-      cb = null
-    })
-    stream.once('error', function (err) {
-      if (cb) cb(err)
-      cb = null
-    })
-  }
-
-  simpleGet.simpleConcat = simpleConcat
+  simpleGet.concat = simpleGet;
   simpleGet.defaults = _default;
   simpleGet.extend = extend;
 

@@ -48,6 +48,28 @@ test('get.concat', function (t) {
   })
 })
 
+test('should concat multiple parts', function (t) {
+  t.plan(4)
+  const server = http.createServer(function (req, res) {
+    res.statusCode = 200
+    res.write('12345');
+    setTimeout(()=> {
+      res.end('6789');
+    }, 1000);
+  })
+
+  server.listen(0, function () {
+    const port = server.address().port
+    get.concat('http://localhost:' + port, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.ok(Buffer.isBuffer(data), '`data` is type buffer')
+      t.equal(data.toString(), '123456789')
+      server.close()
+    })
+  })
+})
+
 test('get.concat json', function (t) {
   t.plan(3)
   const server = http.createServer(function (req, res) {

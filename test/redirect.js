@@ -1,11 +1,10 @@
 const get = require('../')
-const concat = get.simpleConcat
 const http = require('http')
 const selfSignedHttps = require('self-signed-https')
 const test = require('tape')
 
 test('follow redirects (up to 10)', function (t) {
-  t.plan(15)
+  t.plan(14)
 
   let num = 0
   const server = http.createServer(function (req, res) {
@@ -24,14 +23,11 @@ test('follow redirects (up to 10)', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port + '/0', function (err, res) {
+    get('http://localhost:' + port + '/0', function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })
@@ -111,7 +107,7 @@ test('follow redirects (11 is too many)', function (t) {
 })
 
 test('redirect https to http', function (t) {
-  t.plan(6)
+  t.plan(5)
 
   let httpPort = null
   let httpsPort = null
@@ -136,22 +132,19 @@ test('redirect https to http', function (t) {
       get({
         url: 'https://localhost:' + httpsPort + '/path1',
         rejectUnauthorized: false
-      }, function (err, res) {
+      }, function (err, res, data) {
         t.error(err)
         t.equal(res.statusCode, 200)
-        concat(res, function (err, data) {
-          t.error(err)
-          t.equal(data.toString(), 'response')
-          httpsServer.close()
-          httpServer.close()
-        })
+        t.equal(data.toString(), 'response')
+        httpsServer.close()
+        httpServer.close()
       })
     })
   })
 })
 
 test('redirect http to https', function (t) {
-  t.plan(6)
+  t.plan(5)
 
   let httpsPort = null
   let httpPort = null
@@ -176,22 +169,19 @@ test('redirect http to https', function (t) {
       get({
         url: 'http://localhost:' + httpPort + '/path1',
         rejectUnauthorized: false
-      }, function (err, res) {
+      }, function (err, res, data) {
         t.error(err)
         t.equal(res.statusCode, 200)
-        concat(res, function (err, data) {
-          t.error(err)
-          t.equal(data.toString(), 'response')
-          httpsServer.close()
-          httpServer.close()
-        })
+        t.equal(data.toString(), 'response')
+        httpsServer.close()
+        httpServer.close()
       })
     })
   })
 })
 
 test('redirect to different host/port', function (t) {
-  t.plan(7)
+  t.plan(6)
 
   let port1 = null
   let port2 = null
@@ -216,15 +206,12 @@ test('redirect to different host/port', function (t) {
     port1 = server1.address().port
     server2.listen(0, function () {
       port2 = server2.address().port
-      get('http://localhost:' + port1 + '/path1', function (err, res) {
+      get('http://localhost:' + port1 + '/path1', function (err, res, data) {
         t.error(err)
         t.equal(res.statusCode, 200)
-        concat(res, function (err, data) {
-          t.error(err)
-          t.equal(data.toString(), 'response')
-          server1.close()
-          server2.close()
-        })
+        t.equal(data.toString(), 'response')
+        server1.close()
+        server2.close()
       })
     })
   })
@@ -232,7 +219,7 @@ test('redirect to different host/port', function (t) {
 
 // See https://github.com/feross/simple-get/issues/32
 test('redirect should clear explicitly specified `host` header', function (t) {
-  t.plan(8)
+  t.plan(7)
 
   let port1 = null
   let port2 = null
@@ -265,22 +252,19 @@ test('redirect should clear explicitly specified `host` header', function (t) {
         headers: {
           host: `localhost:${port1}`
         }
-      }, function (err, res) {
+      }, function (err, res, data) {
         t.error(err)
         t.equal(res.statusCode, 200)
-        concat(res, function (err, data) {
-          t.error(err)
-          t.equal(data.toString(), 'response')
-          server1.close()
-          server2.close()
-        })
+        t.equal(data.toString(), 'response')
+        server1.close()
+        server2.close()
       })
     })
   })
 })
 
 test('redirect should clear explicitly specified `Host` (note uppercase) header', function (t) {
-  t.plan(8)
+  t.plan(7)
 
   let port1 = null
   let port2 = null
@@ -313,22 +297,19 @@ test('redirect should clear explicitly specified `Host` (note uppercase) header'
         headers: {
           Host: `localhost:${port1}`
         }
-      }, function (err, res) {
+      }, function (err, res, data) {
         t.error(err)
         t.equal(res.statusCode, 200)
-        concat(res, function (err, data) {
-          t.error(err)
-          t.equal(data.toString(), 'response')
-          server1.close()
-          server2.close()
-        })
+        t.equal(data.toString(), 'response')
+        server1.close()
+        server2.close()
       })
     })
   })
 })
 
 test('follow redirects without "url" option', function (t) {
-  t.plan(15)
+  t.plan(14)
 
   let num = 0
   const server = http.createServer(function (req, res) {
@@ -347,14 +328,11 @@ test('follow redirects without "url" option', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ hostname: 'localhost', port, path: '/0' }, function (err, res) {
+    get({ hostname: 'localhost', port, path: '/0' }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })

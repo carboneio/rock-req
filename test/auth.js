@@ -1,10 +1,9 @@
 const get = require('../')
-const concat = get.simpleConcat
 const http = require('http')
 const test = require('tape')
 
 test('basic auth', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.headers.authorization, 'Basic Zm9vOmJhcg==')
@@ -14,20 +13,17 @@ test('basic auth', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://foo:bar@localhost:' + port, function (err, res) {
+    get('http://foo:bar@localhost:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })
 
 test('basic auth + host', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.headers.authorization, 'Basic Zm9vOmJhcg==')
@@ -37,20 +33,17 @@ test('basic auth + host', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ auth: 'foo:bar', host: 'localhost', port }, function (err, res) {
+    get({ auth: 'foo:bar', host: 'localhost', port }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })
 
 test('basic auth + hostname', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.headers.authorization, 'Basic Zm9vOmJhcg==')
@@ -60,14 +53,11 @@ test('basic auth + hostname', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ auth: 'foo:bar', hostname: 'localhost', port }, function (err, res) {
+    get({ auth: 'foo:bar', hostname: 'localhost', port }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })

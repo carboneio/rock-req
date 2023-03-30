@@ -1,12 +1,11 @@
 const get = require('../')
-const concat = get.simpleConcat
 const http = require('http')
 const querystring = require('querystring')
 const str = require('string-to-stream')
 const test = require('tape')
 
 test('post (text body)', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.method, 'POST')
@@ -20,20 +19,17 @@ test('post (text body)', function (t) {
       url: 'http://localhost:' + port,
       body: 'this is the body'
     }
-    get.post(opts, function (err, res) {
+    get.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'this is the body')
-        server.close()
-      })
+      t.equal(data.toString(), 'this is the body')
+      server.close()
     })
   })
 })
 
 test('post (utf-8 text body)', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.method, 'POST')
@@ -47,20 +43,17 @@ test('post (utf-8 text body)', function (t) {
       url: 'http://localhost:' + port,
       body: 'jedan dva tri četiri'
     }
-    get.post(opts, function (err, res) {
+    get.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'jedan dva tri četiri')
-        server.close()
-      })
+      t.equal(data.toString(), 'jedan dva tri četiri')
+      server.close()
     })
   })
 })
 
 test('post (buffer body)', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.method, 'POST')
@@ -74,20 +67,17 @@ test('post (buffer body)', function (t) {
       url: 'http://localhost:' + port,
       body: Buffer.from('this is the body')
     }
-    get.post(opts, function (err, res) {
+    get.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'this is the body')
-        server.close()
-      })
+      t.equal(data.toString(), 'this is the body')
+      server.close()
     })
   })
 })
 
 test('post (stream body)', function (t) {
-  t.plan(6)
+  t.plan(5)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.method, 'POST')
@@ -102,14 +92,11 @@ test('post (stream body)', function (t) {
       url: 'http://localhost:' + port,
       body: str('this is the body')
     }
-    get.post(opts, function (err, res) {
+    get.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'this is the body')
-        server.close()
-      })
+      t.equal(data.toString(), 'this is the body')
+      server.close()
     })
   })
 })

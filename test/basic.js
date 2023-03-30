@@ -1,11 +1,10 @@
 const get = require('../')
-const concat = get.simpleConcat
 const http = require('http')
 const selfSignedHttps = require('self-signed-https')
 const test = require('tape')
 
 test('simple get', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/path')
@@ -15,20 +14,17 @@ test('simple get', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port + '/path', function (err, res) {
+    get('http://localhost:' + port + '/path', function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })
 
 test('https', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = selfSignedHttps(function (req, res) {
     t.equal(req.url, '/path')
@@ -41,20 +37,17 @@ test('https', function (t) {
     get({
       url: 'https://localhost:' + port + '/path',
       rejectUnauthorized: false
-    }, function (err, res) {
+    }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })
 
 test('simple get json', function (t) {
-  t.plan(6)
+  t.plan(5)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/path')
@@ -69,14 +62,11 @@ test('simple get json', function (t) {
       url: 'http://localhost:' + port + '/path',
       json: true
     }
-    get(opts, function (err, res) {
+    get(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), '{"message":"response"}')
-        server.close()
-      })
+      t.equal(JSON.stringify(data), '{"message":"response"}')
+      server.close()
     })
   })
 })
@@ -133,7 +123,7 @@ test('timeout option', function (t) {
 })
 
 test('rewrite POST redirects to GET', function (t) {
-  t.plan(8)
+  t.plan(7)
 
   let redirected = false
 
@@ -160,20 +150,17 @@ test('rewrite POST redirects to GET', function (t) {
       body: '123',
       url: 'http://localhost:' + port
     }
-    get(opts, function (err, res) {
+    get(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), '')
-        server.close()
-      })
+      t.equal(data.toString(), '')
+      server.close()
     })
   })
 })
 
 test('simple get hostname + url', function (t) {
-  t.plan(5)
+  t.plan(4)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/path')
@@ -183,14 +170,11 @@ test('simple get hostname + url', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ host: 'localhost', port, url: '/path' }, function (err, res) {
+    get({ host: 'localhost', port, url: '/path' }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        server.close()
-      })
+      t.equal(data.toString(), 'response')
+      server.close()
     })
   })
 })

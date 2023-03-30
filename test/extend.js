@@ -1,5 +1,4 @@
 const get = require('../')
-const concat = get.simpleConcat
 const http = require('http')
 const str = require('string-to-stream')
 const test = require('tape')
@@ -128,7 +127,7 @@ test('beforeRequest handler, combined with retries', function (t) {
 
 
 test('beforeRequest handler, combined with redirect with absolute URL', function (t) {
-  t.plan(6 + 2*4)
+  t.plan(5 + 2*4)
 
   let httpsPort = null
   let httpPort = null
@@ -173,15 +172,12 @@ test('beforeRequest handler, combined with redirect with absolute URL', function
       newInstance({
         url: 'http://localhost:' + httpPort + '/before',
         rejectUnauthorized: false
-      }, function (err, res) {
+      }, function (err, res, data) {
         t.error(err)
         t.equal(res.statusCode, 200)
-        concat(res, function (err, data) {
-          t.error(err)
-          t.equal(data.toString(), 'response')
-          httpsServer.close()
-          httpServer.close()
-        })
+        t.equal(data.toString(), 'response')
+        httpsServer.close()
+        httpServer.close()
       })
     })
   })
@@ -189,7 +185,7 @@ test('beforeRequest handler, combined with redirect with absolute URL', function
 
 
 test('beforeRequest handler, combined with redirect with relative URL', function (t) {
-  t.plan(6 + 4 + 3)
+  t.plan(5 + 4 + 3)
 
   let httpPort = null
 
@@ -229,14 +225,11 @@ test('beforeRequest handler, combined with redirect with relative URL', function
     newInstance({
       url: 'http://localhost:' + httpPort + '/before',
       rejectUnauthorized: false
-    }, function (err, res) {
+    }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
-      concat(res, function (err, data) {
-        t.error(err)
-        t.equal(data.toString(), 'response')
-        httpServer.close()
-      })
+      t.equal(data.toString(), 'response')
+      httpServer.close()
     })
   })
 })

@@ -1,20 +1,12 @@
 {
-  "name": "simple-get",
-  "description": "Simplest way to make http get requests. Supports HTTPS, redirects, gzip/deflate, streams in < 100 lines.",
-  "version": "4.0.1",
+  "name": "lightReq",
+  "description": "Zero deps request library (150 LOC): https, redirects, retries on failure, gzip/deflate/brotli, extensible, streams, JSON mode, forms, timeout",
+  "version": "1.0.0",
   "author": {
-    "name": "Feross Aboukhadijeh",
-    "email": "feross@feross.org",
-    "url": "https://feross.org"
+    "name": "David Grelaud & Feross Aboukhadijeh"
   },
   "browser": {
     "decompress-response": false
-  },
-  "bugs": {
-    "url": "https://github.com/feross/simple-get/issues"
-  },
-  "dependencies": {
-    "decompress-response": "^6.0.0"
   },
   "devDependencies": {
     "self-signed-https": "^1.0.5",
@@ -23,12 +15,11 @@
     "tape": "^5.0.0"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=16"
   },
   "files": [
     "index.js"
   ],
-  "homepage": "https://github.com/feross/simple-get",
   "keywords": [
     "request",
     "http",
@@ -52,20 +43,6 @@
     "url": "git://github.com/feross/simple-get.git"
   },
   "scripts": {
-    "test": "standard && tape test/*.js"
-  },
-  "funding": [
-    {
-      "type": "github",
-      "url": "https://github.com/sponsors/feross"
-    },
-    {
-      "type": "patreon",
-      "url": "https://www.patreon.com/feross"
-    },
-    {
-      "type": "consulting",
-      "url": "https://feross.org/support"
-    }
-  ]
+    "test": "tape test/*.js"
+  }
 }
