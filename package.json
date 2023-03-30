@@ -1,6 +1,6 @@
 {
-  "name": "lightReq",
-  "description": "Zero deps request library (150 LOC): https, redirects, retries on failure, gzip/deflate/brotli, extensible, streams, JSON mode, forms, timeout",
+  "name": "rock-req",
+  "description": "Zero dependencies (150 LOC) & rock-solid request library. Supports https, redirects, safe retry on failure, gzip/deflate/brotli, extensible, proxy, streams, JSON mode, forms, timeout",
   "version": "1.0.0",
   "author": {
     "name": "David Grelaud & Feross Aboukhadijeh"
@@ -23,24 +23,26 @@
   "keywords": [
     "request",
     "http",
-    "GET",
     "get request",
     "http.get",
     "redirects",
+    "retry",
     "follow redirects",
     "gzip",
     "deflate",
     "https",
-    "http-https",
     "stream",
     "simple request",
+    "light request",
+    "kiss request",
+    "tiny request",
     "simple get"
   ],
   "license": "MIT",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/feross/simple-get.git"
+    "url": "git://github.com/carboneio/rock-req.git"
   },
   "scripts": {
     "test": "tape test/*.js"

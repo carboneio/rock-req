@@ -1,13 +1,17 @@
-# simple-get [![ci][ci-image]][ci-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url]
+# Rock-req [![javascript style guide][standard-image]][standard-url]
 
-[ci-image]: https://img.shields.io/github/workflow/status/feross/simple-get/ci/master
-[ci-url]: https://github.com/feross/simple-get/actions
-[npm-image]: https://img.shields.io/npm/v/simple-get.svg
-[npm-url]: https://npmjs.org/package/simple-get
-[downloads-image]: https://img.shields.io/npm/dm/simple-get.svg
-[downloads-url]: https://npmjs.org/package/simple-get
 [standard-image]: https://img.shields.io/badge/code_style-standard-brightgreen.svg
 [standard-url]: https://standardjs.com
+
+
+## Why?
+
+- Many alternatives are heavy and may not be suitable for lightweight use cases: node-fetch, superagent, needle, got, axios, request
+- Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
+- Managing reliable retries is difficult (tricky with streams) or not possible with most libraries
+- Fallback to another forward proxy dynamically between two retries is not possible
+- Use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/) is difficult because it requires URL rewritting
+
 
 ### Simplest way to make http get requests
 
@@ -31,12 +35,19 @@ All this in < 100 lines of code.
 ## install
 
 ```
-npm install simple-get
+npm install rock-req
 ```
 
 ## usage
 
 Note, all these examples also work in the browser with [browserify](http://browserify.org/).
+
+
+## Without streams
+
+
+
+## Streams
 
 
 ### simple GET request
