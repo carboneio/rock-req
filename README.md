@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/rock-req-logo.svg" alt="rock-req logo" height="60"/>
+  <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/rock-req-logo.svg" alt="rock-req logo" height="120"/>
 </p>
 
 <h1 align="center">Rock-req.js</h1>
@@ -13,7 +13,7 @@
 [standard-url]: https://standardjs.com
 
 
-## 🔥 Why do you need this?
+## 🔥 Why should you need this?
 
 In most libraries:
 
@@ -23,21 +23,23 @@ In most libraries:
 - Many request libraries are heavy: node-fetch, superagent, needle, got, axios, request
 - Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
 
-⚡️ **Rock-req** solves these problems with only **150 lines of code** and **zero dependencies** and is **battle-tested**
+⚡️ **Rock-req** solves these problems with only **150 lines of code** and **zero dependencies**
 
 It also supports:
 
-- follows redirects
-- handles gzip/deflate/brotli responses
-- modify defaults
-- extend and create new instances
-- composable
-- streams
-- timeouts
+- Follows redirects
+- Handles gzip/deflate/brotli responses
+- Modify defaults
+- Extend and create new instances
+- Composable
+- Streams
+- Timeouts
 - HTTPS / HTTP
-- composes well with npm packages for features like cookies, proxies, form data, & OAuth
-- typescript definition
-- almost same API as `simple-get` with alternative synatx
+- Composes well with npm packages for features like cookies, proxies, form data, & OAuth
+- Typescript definition
+- Keep 98% of the `simple-get` API (fork source)
+
+
 
 
 ## Usage
@@ -637,5 +639,11 @@ The API
 https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_class_http_agent
 
 // TOdo test https://stackoverflow.com/questions/66442145/nodejs-stream-behaviour-pipeline-callback-not-called
+
+
+# Supporters
+
+Thank you  Thank you [Feross Aboukhadijeh](https://github.com/feross).
+
 
 
