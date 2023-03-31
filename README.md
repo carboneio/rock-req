@@ -1,358 +1,292 @@
-# Rock-req [![javascript style guide][standard-image]][standard-url]
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/rock-req-logo.svg" alt="rock-req logo" height="60"/>
+</p>
+
+<h1 align="center">Rock-req.js</h1>
+
+<p align="center">Ensure your HTTP requests always reach their destination!</p>
+
+[![javascript style guide][standard-image]][standard-url]
 
 [standard-image]: https://img.shields.io/badge/code_style-standard-brightgreen.svg
 [standard-url]: https://standardjs.com
 
 
-## Why?
+## 🔥 Why do you need this?
 
-- Many alternatives are heavy and may not be suitable for lightweight use cases: node-fetch, superagent, needle, got, axios, request
+In most libraries:
+
+- Managing **reliable retries** is difficult and tricky with streams
+- **Intercepting retries** to use another Egress controller like [HAProxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/) between two requests is not possible.
+  Using **multiple forward proxies** has several benefits like **higher availability** and **increased bandwidth**
+- Many request libraries are heavy: node-fetch, superagent, needle, got, axios, request
 - Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
-- Managing reliable retries is difficult (tricky with streams) or not possible with most libraries
-- Fallback to another forward proxy dynamically between two retries is not possible
-- Use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/) is difficult because it requires URL rewritting
 
+⚡️ **Rock-req** solves these problems with only **150 lines of code** and **zero dependencies** and is **battle-tested**
 
-### Simplest way to make http get requests
-
-## features
-
-This module is the lightest possible wrapper on top of node.js `http`, but supporting these essential features:
+It also supports:
 
 - follows redirects
-- automatically retries on error
-- create new instance
-- extend with global header, URL rewritting, 
+- handles gzip/deflate/brotli responses
+- modify defaults
+- extend and create new instances
 - composable
-- automatically handles gzip/deflate responses
-- supports HTTPS
-- supports specifying a timeout
-- supports convenience `url` key so there's no need to use `url.parse` on the url when specifying options
+- streams
+- timeouts
+- HTTPS / HTTP
 - composes well with npm packages for features like cookies, proxies, form data, & OAuth
+- typescript definition
+- almost same API as `simple-get` with alternative synatx
 
-All this in < 100 lines of code.
 
-## install
+## Usage
+
+
+### Install
 
 ```
-npm install rock-req
+  npm install rock-req
 ```
 
-## usage
+### GET, HEAD requests
 
-Note, all these examples also work in the browser with [browserify](http://browserify.org/).
+Here is how to do a simple get:
 
-
-## Without streams
-
-
-
-## Streams
-
-
-### simple GET request
-
-Doesn't get easier than this:
 
 ```js
-const get = require('simple-get')
+const rock = require('rock-req')
 
-get('http://example.com', function (err, res) {
+rock.get('http://example.com', function (err, res, data) {
   if (err) throw err
-  console.log(res.statusCode) // 200
-  res.pipe(process.stdout) // `res` is a stream
+  console.log(data) // Buffer('this is the server response')
 })
 ```
 
-### even simpler GET request
-
-If you just want the data, and don't want to deal with streams:
+Alternatives syntax:
 
 ```js
-const get = require('simple-get')
+rock('http://example.com', function (err, res, data) {} )
+// or
+const opts = {
+  url   : 'http://example.com',
+  method: 'GET'
+}
+// or
+rock(opts, function (err, res, data) {} )
+// or
+rock.get(opts, function (err, res, data) {} )
+```
 
-get.concat('http://example.com', function (err, res, data) {
+### POST, PUT, PATCH, HEAD, DELETE requests
+
+// TODO
+
+
+```js
+const rock = require('rock-req')
+
+const opts = {
+  url: 'http://example.com',
+  body: 'this is the POST body'
+}
+rock.post(opts, body, function (err, res, data) {
+  if (err) throw err
+  console.log(data) // Buffer('this is the server response')
+})
+
+rock('http://example.com', function (err, res, data) {
+  // res is the 
   if (err) throw err
   console.log(res.statusCode) // 200
   console.log(data) // Buffer('this is the server response')
 })
 ```
 
-### POST, PUT, PATCH, HEAD, DELETE support
+### GET, POST, PUT, PATCH, HEAD, DELETE
 
-For `POST`, call `get.post` or use option `{ method: 'POST' }`.
+For `POST`, call `rock.post` or use option `{ method: 'POST' }`.
 
 ```js
-const get = require('simple-get')
+const rock = require('rock-req')
 
 const opts = {
   url: 'http://example.com',
   body: 'this is the POST body'
 }
-get.post(opts, function (err, res) {
+rock.post(opts, function (err, res, data) {
   if (err) throw err
-  res.pipe(process.stdout) // `res` is a stream
+  console.log(data) // Buffer('this is the server response')
 })
 ```
 
-#### A more complex example:
+Alternative syntax:
 
 ```js
-const get = require('simple-get')
+  rock.post(opts, body, function (err, res, data) {} )
+  rock.post('http://example.com', body, function (err, res, data) {} )
+```
 
-get({
-  url: 'http://example.com',
-  method: 'POST',
-  body: 'this is the POST body',
+### Complex example with all options:
 
-  // simple-get accepts all options that node.js `http` accepts
-  // See: http://nodejs.org/api/http.html#http_http_request_options_callback
+```js
+const rock = require('rock-req')
+
+rock({
+  url    : 'http://example.com',
+  method : 'POST',
+  body   : 'this is the POST body',
   headers: {
     'user-agent': 'my cool app'
   }
-}, function (err, res) {
+}, function (err, res, data) {
   if (err) throw err
 
   // All properties/methods from http.IncomingResponse are available,
   // even if a gunzip/inflate transform stream was returned.
-  // See: http://nodejs.org/api/http.html#http_http_incomingmessage
-  res.setTimeout(10000)
   console.log(res.headers)
-
-  res.on('data', function (chunk) {
-    // `chunk` is the decoded response, after it's been gunzipped or inflated
-    // (if applicable)
-    console.log('got a chunk of the response: ' + chunk)
-  }))
-
+  console.log(data)
 })
 ```
 
-### JSON
+**opts** can contain any value of NodeJS http.request with. Here are the most used one:
 
-You can serialize/deserialize request and response with JSON:
+  - `maxRedirects <number>`overwrite global maximum number of redirects. Defaults to 10
+  - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 1
+  - `body`
+  - `json`
+  - `url`
+  - `method <string>` A string specifying the HTTP request method. Default: 'GET'.
+  - `headers <Object>` An object containing request headers.
+  - `timeout <number>`: A number specifying the socket timeout in milliseconds.
+  - `auth <string>` Basic authentication ('user:password') to compute an Authorization header.
+  - `port <number>` Port of remote server. Default: defaultPort if set, else 80.
+  - `host <string>` A domain name or IP address of the server to issue the request to. Default: 'localhost'.
+  - `hostname <string>` Alias for host.
+  - `path <string>` Request path. Should include query string if any. E.G. '/index.html?page=12'. 
+  - `protocol <string>` Protocol to use. Default: 'http:'.
+  - `setHost <boolean>`: Specifies whether or not to automatically add the Host header. Defaults to true.
+  - `agent <http.Agent> | <boolean>` Controls Agent behavior. Possible values:
+    - `undefined` (default): use http.globalAgent for this host and port.
+    - `Agent object`: explicitly use the passed in Agent.
+    - `false: causes a new Agent with default values to be used.
+
+
+### Input Stream
+
+Rock-req requires that input stream is initialized in a function.
+This function is invoked by rock-req for every request retry.
+If something goes wrong, the old stream is destroyed.
 
 ```js
-const get = require('simple-get')
+const rock = require('rock-req')
+const { Readable } = require('stream');
 
-const opts = {
-  method: 'POST',
-  url: 'http://example.com',
-  body: {
-    key: 'value'
-  },
-  json: true
+/**
+ * Initializes the input stream.
+ *
+ * @param  {Object} opts  contains all request options
+ *                        with the current counter `remainingRetry` and `remainingRedirect``
+ *                        DO NOT MODIFY
+ * @return {Readable}
+ */
+function createInputStream(opts) {
+  // Create the stream. It can fs.readFile, ...
+  const myReadStream = new Readable({
+    construct(cb) {
+      this.data = ['12345', '6789', null]
+      this.it = 0
+      cb()
+    },
+    read(size) {
+      this.push(this.data[this.it++])
+    }
+  });
+  // It must return the created stream. Otherwise, the request is cancel with an error
+  return myReadStream
 }
-get.concat(opts, function (err, res, data) {
-  if (err) throw err
-  console.log(data.key) // `data` is an object
-})
-```
-
-### Timeout
-
-You can set a timeout (in milliseconds) on the request with the `timeout` option.
-If the request takes longer than `timeout` to complete, then the entire request
-will fail with an `Error`.
-
-```js
-const get = require('simple-get')
 
 const opts = {
-  url: 'http://example.com',
-  timeout: 2000 // 2 second timeout
+  url : 'http://example.com',
+  body: createInputStream
 }
-
-get(opts, function (err, res) {})
+rock(opts, function (err, res, data) {})
 ```
 
-### One Quick Tip
-
-It's a good idea to set the `'user-agent'` header so the provider can more easily
-see how their resource is used.
+Alternative syntax:
 
 ```js
-const get = require('simple-get')
-const pkg = require('./package.json')
-
-get('http://example.com', {
-  headers: {
-    'user-agent': `my-module/${pkg.version} (https://github.com/username/my-module)`
-  }
-})
+  rock.post('http://example.com', createInputStream, function (err, res, data) {})
+  // or with more object options:
+  rock.post(opts, createInputStream, function (err, res, data) {})
 ```
 
-### Proxies
 
-You can use the [`tunnel`](https://github.com/koichik/node-tunnel) module with the
-`agent` option to work with proxies:
+
+### Output Stream
+
+Rock-req requires that output stream is initialized in a function.
+This function is invoked by rock-req for every request retry.
 
 ```js
-const get = require('simple-get')
-const tunnel = require('tunnel')
 
-const opts = {
-  url: 'http://example.com',
-  agent: tunnel.httpOverHttp({
-    proxy: {
-      host: 'localhost'
+const rock = require('rock-req')
+const { Writable, finished } = require('stream')
+
+/**
+ * Initializes the output stream.
+ *
+ * @param  {Object} opts  contains all request options
+ *                        with the current counter `remainingRetry` and `remainingRedirect``
+ *                        DO NOT MODIFY
+ * @param  {Object} res   http response (res.statusCode, ...)
+ *                        DO NOT MODIFY
+ *                        DO NOT CONSUME THE STREAM, rockreq pipes your write stream.
+ * @return {Writable}
+ */
+function createOutputStream(opts, res) {
+  // Create the stream. It can be fs.createWriteStream, ...
+  const myWriteStream = new Writable({ 
+    write (chunk, enc, wcb) {
+      chunks.push(chunk); wcb()
     }
   })
+  // Internally, rock-req uses pipeline. If something goes wrong, the stream is destroyed automatically.
+  // If you need to do some action (removing temporary files, ...), uses this native NodeJS method:
+  const cleanup = finished(myWriteStream, (err) => {
+    if (err) {
+      // clean up things 
+    } 
+    // When using the finished() method in NodeJS, it's important to be aware that it can leave some event listeners 
+    // (specifically, the 'error', 'end', 'finish', and 'close' events) hanging around even after this callback function has been called.
+    // This is intentional, as it helps prevent unexpected crashes if an error occurs due to incorrect stream implementations.
+    // However, if you don't want these event listeners to stick around after the callback function has been called,
+    // you can use the cleanup function that's returned by stream.finished() to remove them. 
+    // You'll need to explicitly call this cleanup function within your callback function to ensure that the event listeners get removed properly.
+    cleanup();
+  });
+  // It must return a Writable stream. Otherwise, the request is cancel with an error
+  return myWriteStream
 }
-
-get(opts, function (err, res) {})
-```
-
-### Cookies
-
-You can use the [`cookie`](https://github.com/jshttp/cookie) module to include
-cookies in a request:
-
-```js
-const get = require('simple-get')
-const cookie = require('cookie')
 
 const opts = {
-  url: 'http://example.com',
-  headers: {
-    cookie: cookie.serialize('foo', 'bar')
-  }
+  url    : 'http://example.com',
+  output : createOutputStream
 }
-
-get(opts, function (err, res) {})
-```
-
-### Form data
-
-You can use the [`form-data`](https://github.com/form-data/form-data) module to
-create POST request with form data:
-
-```js
-const fs = require('fs')
-const get = require('simple-get')
-const FormData = require('form-data')
-const form = new FormData()
-
-form.append('my_file', fs.createReadStream('/foo/bar.jpg'))
-
-const opts = {
-  url: 'http://example.com',
-  body: form
-}
-
-get.post(opts, function (err, res) {})
-```
-
-#### Or, include `application/x-www-form-urlencoded` form data manually:
-
-```js
-const get = require('simple-get')
-
-const opts = {
-  url: 'http://example.com',
-  form: {
-    key: 'value'
-  }
-}
-get.post(opts, function (err, res) {})
-```
-
-### Specifically disallowing redirects
-
-```js
-const get = require('simple-get')
-
-const opts = {
-  url: 'http://example.com/will-redirect-elsewhere',
-  followRedirects: false
-}
-// res.statusCode will be 301, no error thrown
-get(opts, function (err, res) {})
-```
-
-### Basic Auth
-
-```js
-const user = 'someuser'
-const pass = 'pa$$word'
-const encodedAuth = Buffer.from(`${user}:${pass}`).toString('base64')
-
-get('http://example.com', {
-  headers: {
-    authorization: `Basic ${encodedAuth}`
-  }
+rock(opts, function (err, res) {
+  // an optional callback is called when the process is finished
 })
 ```
 
-### OAuth
+### Retry on failure
 
-You can use the [`oauth-1.0a`](https://github.com/ddo/oauth-1.0a) module to create
-a signed OAuth request:
-
-```js
-const get = require('simple-get')
-const crypto  = require('crypto')
-const OAuth = require('oauth-1.0a')
-
-const oauth = OAuth({
-  consumer: {
-    key: process.env.CONSUMER_KEY,
-    secret: process.env.CONSUMER_SECRET
-  },
-  signature_method: 'HMAC-SHA1',
-  hash_function: (baseString, key) => crypto.createHmac('sha1', key).update(baseString).digest('base64')
-})
-
-const token = {
-  key: process.env.ACCESS_TOKEN,
-  secret: process.env.ACCESS_TOKEN_SECRET
-}
-
-const url = 'https://api.twitter.com/1.1/statuses/home_timeline.json'
-
-const opts = {
-  url: url,
-  headers: oauth.toHeader(oauth.authorize({url, method: 'GET'}, token)),
-  json: true
-}
-
-get(opts, function (err, res) {})
-```
-
-### Throttle requests
-
-You can use [limiter](https://github.com/jhurliman/node-rate-limiter) to throttle requests. This is useful when calling an API that is rate limited.
-
-```js
-const simpleGet = require('simple-get')
-const RateLimiter = require('limiter').RateLimiter
-const limiter = new RateLimiter(1, 'second')
-
-const get = (opts, cb) => limiter.removeTokens(1, () => simpleGet(opts, cb))
-get.concat = (opts, cb) => limiter.removeTokens(1, () => simpleGet.concat(opts, cb))
-
-var opts = {
-  url: 'http://example.com'
-}
-
-get.concat(opts, processResult)
-get.concat(opts, processResult)
-
-function processResult (err, res, data) {
-  if (err) throw err
-  console.log(data.toString())
-}
-```
-
-### Retry on errors
-
-By default, simple-get retries with the following errors.
+By default, rock-req retries with the following errors.
 
 ```js 
-const get = require('simple-get');
+const rock = require('rock-req');
 
 // default values can be overwritten like this:
-get.defaults.retryOnCode = [
+rock.defaults.retryOnCode = [
   408, /* Request Timeout */
   429, /* Too Many Requests */
   500, /* Internal Server Error */
@@ -363,7 +297,7 @@ get.defaults.retryOnCode = [
   522, /* Cloudflare Connection Timed Out */
   524  /* Cloudflare A Timeout Occurred */
 ];
-get.defaults.retryOnError = [
+rock.defaults.retryOnError = [
   'ETIMEDOUT', /* One of the timeout limits was reached. */
   'ECONNRESET', /* The connection was forcibly closed. */
   'EADDRINUSE', /* Could not bind to any free port */
@@ -379,7 +313,7 @@ const opts = {
   body    : 'this is the POST body',
   maxRetry: 2 // default value. 0 = deactivate retry
 }
-get.post(opts, function (err, res) { });
+rock.post(opts, function (err, res) { });
 
 ```
 
@@ -416,14 +350,14 @@ get.defaults = {
 }
 ```
 
-### Extend and create new instance
+### Extend and intercept retries
 
 Create a new instance with specific parameters. 
 
 By default, this new instance inherits values of the instance source if options are not overwritten. 
 Internaly, only the first level of the option object is merged with `Object.assign(currentInstanceOption, newOptions)`.
 
-Here is an usage example of `beforeRequest` to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
+Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
 
 ```js
 const myInstance = get.extend({
@@ -449,11 +383,259 @@ myInstance.concat() ...
 
 ```
 
+
+### JSON
+
+You can serialize/deserialize request and response with JSON:
+
+```js
+const rock = require('rock-req')
+
+const opts = {
+  method: 'POST',
+  url: 'http://example.com',
+  body: {
+    key: 'value'
+  },
+  json: true
+}
+rock.concat(opts, function (err, res, data) {
+  if (err) throw err
+  console.log(data.key) // `data` is an object
+})
+```
+
+### Timeout
+
+You can set a timeout (in milliseconds) on the request with the `timeout` option.
+If the request takes longer than `timeout` to complete, then the entire request
+will fail with an `Error`.
+
+```js
+const rock = require('rock-req')
+
+const opts = {
+  url: 'http://example.com',
+  timeout: 2000 // 2 second timeout
+}
+
+rock(opts, function (err, res) {})
+```
+
+
+### One Quick Tip
+
+It's a good idea to set the `'user-agent'` header so the provider can more easily
+see how their resource is used.
+
+```js
+const rock = require('rock-req')
+const pkg = require('./package.json')
+
+rock('http://example.com', {
+  headers: {
+    'user-agent': `my-module/${pkg.version} (https://github.com/username/my-module)`
+  }
+})
+```
+
+### Proxies
+
+You can use the [`tunnel`](https://github.com/koichik/node-tunnel) module with the
+`agent` option to work with proxies:
+
+```js
+const rock = require('rock-req')
+const tunnel = require('tunnel')
+
+const opts = {
+  url: 'http://example.com',
+  agent: tunnel.httpOverHttp({
+    proxy: {
+      host: 'localhost'
+    }
+  })
+}
+
+rock(opts, function (err, res) {})
+```
+
+### Cookies
+
+You can use the [`cookie`](https://github.com/jshttp/cookie) module to include
+cookies in a request:
+
+```js
+const rock = require('rock-req')
+const cookie = require('cookie')
+
+const opts = {
+  url: 'http://example.com',
+  headers: {
+    cookie: cookie.serialize('foo', 'bar')
+  }
+}
+
+rock(opts, function (err, res) {})
+```
+
+### Form data
+
+You can use the [`form-data`](https://github.com/form-data/form-data) module to
+create POST request with form data:
+
+```js
+const fs = require('fs')
+const rock = require('rock-req')
+const FormData = require('form-data')
+const form = new FormData()
+
+form.append('my_file', fs.createReadStream('/foo/bar.jpg'))
+
+const opts = {
+  url: 'http://example.com',
+  body: form
+}
+
+rock.post(opts, function (err, res) {})
+```
+
+#### Or, include `application/x-www-form-urlencoded` form data manually:
+
+```js
+const rock = require('rock-req')
+
+const opts = {
+  url: 'http://example.com',
+  form: {
+    key: 'value'
+  }
+}
+rock.post(opts, function (err, res) {})
+```
+
+### Specifically disallowing redirects
+
+```js
+const rock = require('rock-req')
+
+const opts = {
+  url: 'http://example.com/will-redirect-elsewhere',
+  followRedirects: false
+}
+// res.statusCode will be 301, no error thrown
+rock(opts, function (err, res) {})
+```
+
+### Basic Auth
+
+```js
+const user = 'someuser'
+const pass = 'pa$$word'
+const encodedAuth = Buffer.from(`${user}:${pass}`).toString('base64')
+
+rock('http://example.com', {
+  headers: {
+    authorization: `Basic ${encodedAuth}`
+  }
+})
+```
+
+### OAuth
+
+You can use the [`oauth-1.0a`](https://github.com/ddo/oauth-1.0a) module to create
+a signed OAuth request:
+
+```js
+const rock = require('rock-req')
+const crypto  = require('crypto')
+const OAuth = require('oauth-1.0a')
+
+const oauth = OAuth({
+  consumer: {
+    key: process.env.CONSUMER_KEY,
+    secret: process.env.CONSUMER_SECRET
+  },
+  signature_method: 'HMAC-SHA1',
+  hash_function: (baseString, key) => crypto.createHmac('sha1', key).update(baseString).digest('base64')
+})
+
+const token = {
+  key: process.env.ACCESS_TOKEN,
+  secret: process.env.ACCESS_TOKEN_SECRET
+}
+
+const url = 'https://api.twitter.com/1.1/statuses/home_timeline.json'
+
+const opts = {
+  url: url,
+  headers: oauth.toHeader(oauth.authorize({url, method: 'GET'}, token)),
+  json: true
+}
+
+rock(opts, function (err, res) {})
+```
+
+### Throttle requests
+
+You can use [limiter](https://github.com/jhurliman/node-rate-limiter) to throttle requests. This is useful when calling an API that is rate limited.
+
+```js
+const rockReq = require('simple-get')
+const RateLimiter = require('limiter').RateLimiter
+const limiter = new RateLimiter(1, 'second')
+
+const rock = (opts, cb) => limiter.removeTokens(1, () => rockReq(opts, cb))
+rock.concat = (opts, cb) => limiter.removeTokens(1, () => rockReq.concat(opts, cb))
+
+var opts = {
+  url: 'http://example.com'
+}
+
+rock.concat(opts, processResult)
+rock.concat(opts, processResult)
+
+function processResult (err, res, data) {
+  if (err) throw err
+  console.log(data.toString())
+}
+```
+
+
+
 ### TODO
 
 - [] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
 
 
-## license
 
-MIT. Copyright (c) [Feross Aboukhadijeh](http://feross.org).
+## How to migrate from simple-get
+
+The API 
+
+
+- Make Managing reliable retries is difficult (tricky with streams), 
+- Intercept retries to use a different forward proxy path
+- Many requests libraries are heavy: node-fetch, superagent, needle, got, axios, request
+- Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
+- Use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/) is difficult because it requires URL rewritting
+
+
+
+
+##
+  - Rmeove deprecated feature of NodeJS req.abort
+  - Fix redirect
+  - HA proxy
+  - Sending a 'Connection: keep-alive' will notify Node.js that the connection to the server should be persisted until the next request.
+
+
+// TODO agent keep Alive
+// TODO le client doit avoir un socker timeout plus court que le proxy pour éviter qu'il requête dans une socket déjà tué par haproxy
+// https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
+
+https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_class_http_agent
+
+// TOdo test https://stackoverflow.com/questions/66442145/nodejs-stream-behaviour-pipeline-callback-not-called
+
+

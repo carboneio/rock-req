@@ -1,7 +1,7 @@
 {
   "name": "rock-req",
-  "description": "Zero dependencies (150 LOC) & rock-solid request library. Supports https, redirects, safe retry on failure, gzip/deflate/brotli, extensible, proxy, streams, JSON mode, forms, timeout",
-  "version": "1.0.0",
+  "description": "Zero dependencies (150 LOC) & rock-solid request library: http/https, reliable retry on failure, redirects, gzip/deflate/brotli, extensible, proxy, streams, JSON mode, forms, timeout",
+  "version": "5.0.0",
   "author": {
     "name": "David Grelaud & Feross Aboukhadijeh"
   },
