@@ -3,7 +3,7 @@
   <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/rock-req-logo.svg" alt="rock-req logo" height="120"/>
 </p>
 
-<h1 align="center">Rock-req.js</h1>
+<h1 align="center" style="border-bottom:none; font-size: 2.2em;">Rock-req.js</h1>
 
 <p align="center">Ensure your HTTP requests always reach their destination!</p>
 
@@ -324,7 +324,7 @@ rock.post(opts, function (err, res) { });
 Change default parameters globally, or create a new instance with specific paramaters (see below)
 
 ```js
-get.defaults = {
+rock.defaults = {
   headers       : {},
   maxRedirects  : 10,
   maxRetry      : 2,
@@ -362,7 +362,7 @@ Internaly, only the first level of the option object is merged with `Object.assi
 Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
 
 ```js
-const myInstance = get.extend({
+const myInstance = rock.extend({
   // WARNING: beforeRequest is also called for each retry/redirect
   beforeRequest: (parsedOpts) => {
     const { hostname, port, protocol, path } = parsedOpts;
