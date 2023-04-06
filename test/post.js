@@ -3,6 +3,7 @@ const http = require('http')
 const querystring = require('querystring')
 const str = require('string-to-stream')
 const test = require('tape')
+const { Readable } = require('stream');
 
 test('post (text body)', function (t) {
   t.plan(4)
@@ -90,7 +91,7 @@ test('post (stream body)', function (t) {
     const port = server.address().port
     const opts = {
       url: 'http://localhost:' + port,
-      body: str('this is the body')
+      body: () => str('this is the body')
     }
     get.post(opts, function (err, res, data) {
       t.error(err)
@@ -100,6 +101,7 @@ test('post (stream body)', function (t) {
     })
   })
 })
+
 
 test('post (json body)', function (t) {
   t.plan(5)

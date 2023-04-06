@@ -2,6 +2,7 @@ const get = require('../')
 const http = require('http')
 const str = require('string-to-stream')
 const test = require('tape')
+const { pipeline , Writable, Readable, finished, PassThrough} = require('stream');
 
 test('get.concat (post, stream body, and json option)', function (t) {
   t.plan(4)
@@ -15,7 +16,7 @@ test('get.concat (post, stream body, and json option)', function (t) {
     const port = server.address().port
     const opts = {
       url: 'http://localhost:' + port,
-      body: str('{"a": "b"}'),
+      body: () => str('{"a": "b"}'),
       method: 'POST',
       json: true
     }
@@ -26,6 +27,46 @@ test('get.concat (post, stream body, and json option)', function (t) {
       t.equal(data.a, 'b')
       server.close()
     })
+  })
+})
+
+test('should return an error if the input stream is not created by a function', function (t) {
+  t.plan(2)
+  const opts = {
+    url: 'http://localhost:',
+    body: str('{"a": "b"}'),
+    method: 'POST',
+    json: true
+  }
+  get.concat(opts, function (err, res, data) {
+    t.ok(err instanceof Error)
+    t.equal(err.message, 'opts.body must be a function returning a Readable stream. RTFM')
+  })
+})
+
+test('should return an error if the output stream is not created by a function', function (t) {
+  t.plan(2)
+  const opts = {
+    url: 'http://localhost',
+    output: new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } }),
+    method: 'GET'
+  }
+  get.concat(opts, function (err, res, data) {
+    t.ok(err instanceof Error)
+    t.equal(err.message, 'opts.output must be a function returning a Writable stream. RTFM')
+  })
+})
+
+test('should return an error if the output stream is something else than a function', function (t) {
+  t.plan(2)
+  const opts = {
+    url: 'http://localhost',
+    output: 'sdsd',
+    method: 'GET'
+  }
+  get.concat(opts, function (err, res, data) {
+    t.ok(err instanceof Error)
+    t.equal(err.message, 'opts.output must be a function returning a Writable stream. RTFM')
   })
 })
 

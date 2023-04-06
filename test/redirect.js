@@ -37,7 +37,6 @@ test('do not follow redirects', function (t) {
 
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/0', 'visited /0')
-
     res.statusCode = 301
     res.setHeader('Location', '/1')
     res.end()

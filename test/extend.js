@@ -94,7 +94,7 @@ test('beforeRequest handler, combined with retries', function (t) {
       t.equal(parsedOpts.protocol, 'http:')
       if (parsedOpts.path === '/first' && parsedOpts.maxRetry === parsedOpts.remainingRetry)
         parsedOpts.path = '/first-rewrite' + parsedOpts.remainingRetry
-      if (parsedOpts.path === '/first-rewrite2' && parsedOpts.remainingRetry === (parsedOpts.maxRetry - 1))
+      if (parsedOpts.remainingRetry === (parsedOpts.maxRetry - 1))
         parsedOpts.path = '/first-rewrite' + parsedOpts.remainingRetry
       if (parsedOpts.path === '/second') {
         parsedOpts.path = '/second-rewrite' + parsedOpts.remainingRetry

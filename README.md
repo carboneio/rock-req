@@ -17,30 +17,29 @@
 
 In most libraries:
 
-- Managing **reliable retries** is difficult and tricky with streams
-- **Intercepting retries** to use another Egress controller like [HAProxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/) between two requests is not possible.
-  Using **multiple forward proxies** has several benefits like **higher availability** and **increased bandwidth**
+- Managing **reliable retries** is difficult, tricky with streams and not battle-tested
+- Using **multiple forward proxies** has several benefits like **higher availability** and **increased bandwidth** but 
+  **Intercepting retries** to use another Egress controller between two requests is not possible.
 - Many request libraries are heavy: node-fetch, superagent, needle, got, axios, request
 - Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
 
 ⚡️ **Rock-req** solves these problems with only **150 lines of code** and **zero dependencies**
 
-It also supports:
+It also supports many features:
 
 - Follows redirects
 - Handles gzip/deflate/brotli responses
 - Modify defaults
 - Extend and create new instances
+- Automatically destroy input/output stream on error (pipeline)
 - Composable
-- Streams
 - Timeouts
 - HTTPS / HTTP
 - Composes well with npm packages for features like cookies, proxies, form data, & OAuth
 - Typescript definition
 - Keep 98% of the `simple-get` API (fork source)
 
-
-
+Like NodeJS pipeline, when the callback is called, the request is 100% finished, even with streams.
 
 ## Usage
 
@@ -361,18 +360,19 @@ Internaly, only the first level of the option object is merged with `Object.assi
 
 Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
 
+`beforeRequest` is always called on each redirect/retry.
+  - on redirect, `opts.url` (and `hostname`, `port`, `protocol`, `path`) is updated to the new location
+  - on retry, `opts.url` (and `hostname`, `port`, `protocol`, `path`) have the same value as they did when the rock-req was initially called
+
+
 ```js
 const myInstance = rock.extend({
-  // WARNING: beforeRequest is also called for each retry/redirect
   beforeRequest: (parsedOpts) => {
     const { hostname, port, protocol, path } = parsedOpts;
-    // Replace only on first try (already replaced for second try)
-    if (parsedOpts.maxRetry === parsedOpts.remainingRetry) {
-      parsedOpts.protocol = 'http:';
-      parsedOpts.hostname = '10.0.0.1';
-      parsedOpts.port = 80;
-      parsedOpts.path = `${protocol}/${hostname}/${port}/${path}`;
-    }
+    parsedOpts.protocol = 'http:';
+    parsedOpts.hostname = '10.0.0.1';
+    parsedOpts.port = 80;
+    parsedOpts.path = `${protocol}/${hostname}/${port}/${path}`;
     return parsedOpts;
   },
   headers: {
@@ -381,7 +381,7 @@ const myInstance = rock.extend({
 });
 
 // Then this instance can be used in your app
-myInstance.concat() ...
+myInstance.get()
 
 ```
 
@@ -612,6 +612,12 @@ function processResult (err, res, data) {
 
 
 ## How to migrate from simple-get
+
+Streams must be created wuth a function!
+
+body = stream 
+
+body = () => { create stream }
 
 The API 
 
