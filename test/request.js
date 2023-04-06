@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const test = require('tape')
 
@@ -12,7 +12,7 @@ test('access `req` object', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    const req = get('http://localhost:' + port, function (err, res) {
+    const req = rock('http://localhost:' + port, function (err, res) {
       t.error(err)
       res.resume() // discard data
       server.close()

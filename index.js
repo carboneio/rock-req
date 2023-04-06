@@ -14,7 +14,7 @@ function extend(defaultOptions) {
   var _default = {
     headers       : {},
     maxRedirects  : 10,
-    maxRetry      : 2,
+    maxRetry      : 0,
     retryDelay    : 100, //ms
     retryOnCode   : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
     retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],

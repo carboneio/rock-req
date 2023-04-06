@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const net = require('net')
 const selfSignedHttps = require('self-signed-https')
@@ -42,7 +42,7 @@ test('should not retry if maxRetry === 0', function (t) {
   })
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/path',
       maxRetry: 0,
       retryOnCode : [500]
@@ -64,7 +64,7 @@ test('should not retry if maxRetry < 0', function (t) {
   })
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/path',
       maxRetry: -1,
       retryOnCode : [500]
@@ -88,7 +88,7 @@ test('should retry "maxRetry" max on HTTP code error', function (t) {
   })
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/path',
       maxRetry: 5
     }, function (err, res, data) {
@@ -109,7 +109,7 @@ test('should use read default.retryOnError to check if rock need to retry or not
     nbTry++;
     res.end('response')
   })
-  const myInstance = get.extend({retryOnCode : [404]});
+  const myInstance = rock.extend({retryOnCode : [404]});
   server.listen(0, function () {
     const port = server.address().port
     myInstance({
@@ -144,7 +144,7 @@ test('should retry even if there is a timeout', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/path',
       timeout: 1000,
       maxRetry: 2
@@ -175,11 +175,12 @@ test('should retry with POST even if there is a timeout', function (t) {
   })
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/path',
       body : 'body message',
       method : 'POST',
-      timeout: 1000
+      timeout: 1000,
+      maxRetry: 2
     }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
@@ -208,7 +209,7 @@ test('should retry if the error is coming from the server after receiving the fi
       }
     }, 1000);
   })
-  const newInstance = get.extend({ maxRetry : 2 });
+  const newInstance = rock.extend({ maxRetry : 2 });
   server.listen(0, function () {
     const port = server.address().port
     newInstance.concat('http://localhost:' + port, function (err, res, data) {
@@ -248,7 +249,7 @@ test('should destroy and restart a new INPUT stream on retry (error on server si
       }
     });
   })
-  const newInstance = get.extend({ maxRetry : 2 });
+  const newInstance = rock.extend({ maxRetry : 2 });
   const inputStreams = [];
   server.listen(0, function () {
     const port = server.address().port
@@ -323,7 +324,7 @@ test('should destroy and restart a new INPUT stream on retry (error on input str
       }
     });
   })
-  const newInstance = get.extend({ maxRetry : 2 })
+  const newInstance = rock.extend({ maxRetry : 2 })
   const inputStreams = []
   server.listen(0, function () {
     const port = server.address().port
@@ -389,7 +390,7 @@ test('should accept finish/cleanup on INPUT stream even if there is a timeout an
       res.end('realEnd')
     }
   })
-  const newInstance = get.extend({ maxRetry : 2 });
+  const newInstance = rock.extend({ maxRetry : 2 });
   server.listen(0, function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0;
@@ -433,7 +434,7 @@ test('should return an error and not retry if the INPUT stream is destroyed sinc
     res.statusCode = 200
     res.end('realEnd')
   })
-  const newInstance = get.extend({ maxRetry : 2 });
+  const newInstance = rock.extend({ maxRetry : 2 });
   server.listen(0, function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0;
@@ -499,7 +500,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on input st
       }
     });
   })
-  const newInstance = get.extend({ maxRetry : 2 })
+  const newInstance = rock.extend({ maxRetry : 2 })
   const inputStreams = []
   server.listen(0, function () {
     const port = server.address().port
@@ -572,7 +573,7 @@ test('should return an error and not retry if the OUTPUT stream is destroyed sin
     res.statusCode = 200
     res.end('realEnd')
   })
-  const newInstance = get.extend({ maxRetry : 2 });
+  const newInstance = rock.extend({ maxRetry : 2 });
   server.listen(0, function () {
     const port = server.address().port
     let nbClientOutpoutStreamCreated = 0;
@@ -645,7 +646,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on output s
       }
     });
   })
-  const newInstance = get.extend({ maxRetry : 2 })
+  const newInstance = rock.extend({ maxRetry : 2 })
   const inputStreams = []
   server.listen(0, function () {
     const port = server.address().port
@@ -737,7 +738,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
       }
     });
   })
-  const newInstance = get.extend({ maxRetry : 2 });
+  const newInstance = rock.extend({ maxRetry : 2 });
   const inputStreams = [];
   let nbClientOutputStreamCreated = 0;
   let outputChunks = [];
@@ -818,7 +819,7 @@ test('should accept using finished/cleanup function of NodeJS on OUTPUT stream o
       }
     });
   })
-  const newInstance = get.extend({ maxRetry : 2 });
+  const newInstance = rock.extend({ maxRetry : 2 });
   const inputStreams = [];
   let nbClientOutputStreamCreated = 0;
   let nbClientOutputFinishedStream = 0;
@@ -895,7 +896,7 @@ function testRetryOnError(t, errorCode) {
   })
   server.listen(0, function () {
     const port = server.address().port
-    const request = get({
+    const request = rock({
       url: 'http://localhost:' + port + '/path',
       maxRetry: 2
     }, function (err, res, data) {
@@ -924,7 +925,7 @@ function testRetryOnHttpCode(t, httpCode, nbError) {
   })
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/path',
       maxRetry: 2
     }, function (err, res, data) {

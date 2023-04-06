@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const test = require('tape')
 
@@ -13,7 +13,7 @@ test('basic auth', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://foo:bar@localhost:' + port, function (err, res, data) {
+    rock('http://foo:bar@localhost:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -33,7 +33,7 @@ test('basic auth + host', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ auth: 'foo:bar', host: 'localhost', port }, function (err, res, data) {
+    rock({ auth: 'foo:bar', host: 'localhost', port }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -53,7 +53,7 @@ test('basic auth + hostname', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ auth: 'foo:bar', hostname: 'localhost', port }, function (err, res, data) {
+    rock({ auth: 'foo:bar', hostname: 'localhost', port }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')

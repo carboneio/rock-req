@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const selfSignedHttps = require('self-signed-https')
 const test = require('tape')
@@ -14,7 +14,7 @@ test('simple get', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port + '/path', function (err, res, data) {
+    rock('http://localhost:' + port + '/path', function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -34,7 +34,7 @@ test('https', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'https://localhost:' + port + '/path',
       rejectUnauthorized: false
     }, function (err, res, data) {
@@ -62,7 +62,7 @@ test('simple get json', function (t) {
       url: 'http://localhost:' + port + '/path',
       json: true
     }
-    get(opts, function (err, res, data) {
+    rock(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(JSON.stringify(data), '{"message":"response"}')
@@ -90,7 +90,7 @@ test('HEAD request', function (t) {
       method: 'HEAD',
       url: 'http://localhost:' + port
     }
-    get.head(opts, function (err, res) {
+    rock.head(opts, function (err, res) {
       t.error(err)
       t.equal(res.statusCode, 200)
       server.close()
@@ -111,7 +111,7 @@ test('timeout option', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/path',
       timeout: 1000,
       maxRetry : 0
@@ -150,7 +150,7 @@ test('rewrite POST redirects to GET', function (t) {
       body: '123',
       url: 'http://localhost:' + port
     }
-    get(opts, function (err, res, data) {
+    rock(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), '')
@@ -170,7 +170,7 @@ test('simple get hostname + url', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ host: 'localhost', port, url: '/path' }, function (err, res, data) {
+    rock({ host: 'localhost', port, url: '/path' }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')

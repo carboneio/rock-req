@@ -1,10 +1,10 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const str = require('string-to-stream')
 const test = require('tape')
 const { pipeline , Writable, Readable, finished, PassThrough} = require('stream');
 
-test('get.concat (post, stream body, and json option)', function (t) {
+test('rock.concat (post, stream body, and json option)', function (t) {
   t.plan(4)
 
   const server = http.createServer(function (req, res) {
@@ -20,7 +20,7 @@ test('get.concat (post, stream body, and json option)', function (t) {
       method: 'POST',
       json: true
     }
-    get.concat(opts, function (err, res, data) {
+    rock.concat(opts, function (err, res, data) {
       t.error(err)
       t.equal(typeof data, 'object')
       t.deepEqual(Object.keys(data), ['a'])
@@ -38,7 +38,7 @@ test('should return an error if the input stream is not created by a function', 
     method: 'POST',
     json: true
   }
-  get.concat(opts, function (err, res, data) {
+  rock.concat(opts, function (err, res, data) {
     t.ok(err instanceof Error)
     t.equal(err.message, 'opts.body must be a function returning a Readable stream. RTFM')
   })
@@ -51,7 +51,7 @@ test('should return an error if the output stream is not created by a function',
     output: new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } }),
     method: 'GET'
   }
-  get.concat(opts, function (err, res, data) {
+  rock.concat(opts, function (err, res, data) {
     t.ok(err instanceof Error)
     t.equal(err.message, 'opts.output must be a function returning a Writable stream. RTFM')
   })
@@ -64,13 +64,13 @@ test('should return an error if the output stream is something else than a funct
     output: 'sdsd',
     method: 'GET'
   }
-  get.concat(opts, function (err, res, data) {
+  rock.concat(opts, function (err, res, data) {
     t.ok(err instanceof Error)
     t.equal(err.message, 'opts.output must be a function returning a Writable stream. RTFM')
   })
 })
 
-test('get.concat', function (t) {
+test('rock.concat', function (t) {
   t.plan(4)
   const server = http.createServer(function (req, res) {
     res.statusCode = 200
@@ -79,7 +79,7 @@ test('get.concat', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get.concat('http://localhost:' + port, function (err, res, data) {
+    rock.concat('http://localhost:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.ok(Buffer.isBuffer(data), '`data` is type buffer')
@@ -101,7 +101,7 @@ test('should concat multiple parts', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get.concat('http://localhost:' + port, function (err, res, data) {
+    rock.concat('http://localhost:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.ok(Buffer.isBuffer(data), '`data` is type buffer')
@@ -111,7 +111,7 @@ test('should concat multiple parts', function (t) {
   })
 })
 
-test('get.concat json', function (t) {
+test('rock.concat json', function (t) {
   t.plan(3)
   const server = http.createServer(function (req, res) {
     res.statusCode = 200
@@ -124,7 +124,7 @@ test('get.concat json', function (t) {
       url: 'http://localhost:' + port + '/path',
       json: true
     }
-    get.concat(opts, function (err, res, data) {
+    rock.concat(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.message, 'response')
@@ -133,7 +133,7 @@ test('get.concat json', function (t) {
   })
 })
 
-test('get.concat json error', function (t) {
+test('rock.concat json error', function (t) {
   t.plan(1)
   const server = http.createServer(function (req, res) {
     res.statusCode = 500
@@ -146,7 +146,7 @@ test('get.concat json error', function (t) {
       url: 'http://localhost:' + port + '/path',
       json: true
     }
-    get.concat(opts, function (err, res, data) {
+    rock.concat(opts, function (err, res, data) {
       t.ok(err instanceof Error)
       server.close()
     })

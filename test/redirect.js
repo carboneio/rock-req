@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const selfSignedHttps = require('self-signed-https')
 const test = require('tape')
@@ -23,7 +23,7 @@ test('follow redirects (up to 10)', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port + '/0', function (err, res, data) {
+    rock('http://localhost:' + port + '/0', function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -44,7 +44,7 @@ test('do not follow redirects', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/0',
       maxRedirects: 0
     }, function (err) {
@@ -67,7 +67,7 @@ test('do not follow redirects and do not error', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port + '/0',
       followRedirects: false
     }, function (err, res) {
@@ -98,7 +98,7 @@ test('follow redirects (11 is too many)', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port + '/0', function (err) {
+    rock('http://localhost:' + port + '/0', function (err) {
       t.ok(err instanceof Error, 'got error')
       server.close()
     })
@@ -128,7 +128,7 @@ test('redirect https to http', function (t) {
     httpsPort = httpsServer.address().port
     httpServer.listen(0, function () {
       httpPort = httpServer.address().port
-      get({
+      rock({
         url: 'https://localhost:' + httpsPort + '/path1',
         rejectUnauthorized: false
       }, function (err, res, data) {
@@ -165,7 +165,7 @@ test('redirect http to https', function (t) {
     httpPort = httpServer.address().port
     httpsServer.listen(0, function () {
       httpsPort = httpsServer.address().port
-      get({
+      rock({
         url: 'http://localhost:' + httpPort + '/path1',
         rejectUnauthorized: false
       }, function (err, res, data) {
@@ -205,7 +205,7 @@ test('redirect to different host/port', function (t) {
     port1 = server1.address().port
     server2.listen(0, function () {
       port2 = server2.address().port
-      get('http://localhost:' + port1 + '/path1', function (err, res, data) {
+      rock('http://localhost:' + port1 + '/path1', function (err, res, data) {
         t.error(err)
         t.equal(res.statusCode, 200)
         t.equal(data.toString(), 'response')
@@ -216,7 +216,6 @@ test('redirect to different host/port', function (t) {
   })
 })
 
-// See https://github.com/feross/simple-get/issues/32
 test('redirect should clear explicitly specified `host` header', function (t) {
   t.plan(7)
 
@@ -245,7 +244,7 @@ test('redirect should clear explicitly specified `host` header', function (t) {
     port1 = server1.address().port
     server2.listen(0, function () {
       port2 = server2.address().port
-      get({
+      rock({
         url: `http://localhost:${port1}/path1`,
         // Explicitly specify a `Host` header, so it won't be set automatically
         headers: {
@@ -290,7 +289,7 @@ test('redirect should clear explicitly specified `Host` (note uppercase) header'
     port1 = server1.address().port
     server2.listen(0, function () {
       port2 = server2.address().port
-      get({
+      rock({
         url: `http://localhost:${port1}/path1`,
         // Explicitly specify a `Host` header, so it won't be set automatically
         headers: {
@@ -327,7 +326,7 @@ test('follow redirects without "url" option', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({ hostname: 'localhost', port, path: '/0' }, function (err, res, data) {
+    rock({ hostname: 'localhost', port, path: '/0' }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')

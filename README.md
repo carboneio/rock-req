@@ -153,7 +153,7 @@ rock({
 **opts** can contain any value of NodeJS http.request with. Here are the most used one:
 
   - `maxRedirects <number>`overwrite global maximum number of redirects. Defaults to 10
-  - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 1
+  - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 0
   - `body`
   - `json`
   - `url`
@@ -170,41 +170,23 @@ rock({
   - `agent <http.Agent> | <boolean>` Controls Agent behavior. Possible values:
     - `undefined` (default): use http.globalAgent for this host and port.
     - `Agent object`: explicitly use the passed in Agent.
-    - `false: causes a new Agent with default values to be used.
+    - `false` causes a new Agent with default values to be used.
 
 
 ### Input Stream
 
 Rock-req requires that input stream is initialized in a function.
+
 This function is invoked by rock-req for every request retry.
 If something goes wrong, the old stream is destroyed.
 
 ```js
 const rock = require('rock-req')
-const { Readable } = require('stream');
+const fs = require('fs')
 
-/**
- * Initializes the input stream.
- *
- * @param  {Object} opts  contains all request options
- *                        with the current counter `remainingRetry` and `remainingRedirect``
- *                        DO NOT MODIFY
- * @return {Readable}
- */
+// opts contains options passed in rock(opts). DO NOT MODIFY IT
 function createInputStream(opts) {
-  // Create the stream. It can fs.readFile, ...
-  const myReadStream = new Readable({
-    construct(cb) {
-      this.data = ['12345', '6789', null]
-      this.it = 0
-      cb()
-    },
-    read(size) {
-      this.push(this.data[this.it++])
-    }
-  });
-  // It must return the created stream. Otherwise, the request is cancel with an error
-  return myReadStream
+  return fs.createReadStream('input.txt');
 }
 
 const opts = {
@@ -222,39 +204,24 @@ Alternative syntax:
   rock.post(opts, createInputStream, function (err, res, data) {})
 ```
 
-
-
 ### Output Stream
 
 Rock-req requires that output stream is initialized in a function.
 This function is invoked by rock-req for every request retry.
 
 ```js
-
 const rock = require('rock-req')
-const { Writable, finished } = require('stream')
+const fs = require('fs')
+const { finished } = require('stream')
 
-/**
- * Initializes the output stream.
- *
- * @param  {Object} opts  contains all request options
- *                        with the current counter `remainingRetry` and `remainingRedirect``
- *                        DO NOT MODIFY
- * @param  {Object} res   http response (res.statusCode, ...)
- *                        DO NOT MODIFY
- *                        DO NOT CONSUME THE STREAM, rockreq pipes your write stream.
- * @return {Writable}
- */
+// opts contains options passed in rock(opts). DO NOT MODIFY IT
+// res  if the http response (res.statusCode, ...). DO NOT MODIFY IT and DO NOT CONSUME THE RES STREAM YOURSELF
 function createOutputStream(opts, res) {
-  // Create the stream. It can be fs.createWriteStream, ...
-  const myWriteStream = new Writable({ 
-    write (chunk, enc, wcb) {
-      chunks.push(chunk); wcb()
-    }
-  })
+
+  const writer = fs.createWriteStream('test_gfg.txt') 
   // Internally, rock-req uses pipeline. If something goes wrong, the stream is destroyed automatically.
   // If you need to do some action (removing temporary files, ...), uses this native NodeJS method:
-  const cleanup = finished(myWriteStream, (err) => {
+  const cleanup = finished(writer, (err) => {
     if (err) {
       // clean up things 
     } 
@@ -267,21 +234,19 @@ function createOutputStream(opts, res) {
     cleanup();
   });
   // It must return a Writable stream. Otherwise, the request is cancel with an error
-  return myWriteStream
+  return writer
 }
 
 const opts = {
   url    : 'http://example.com',
   output : createOutputStream
 }
-rock(opts, function (err, res) {
-  // an optional callback is called when the process is finished
-})
+rock(opts, function (err, res, data) {})
 ```
 
 ### Retry on failure
 
-By default, rock-req retries with the following errors.
+By default, rock-req retries with the following errors if `maxRetry > 1`
 
 ```js 
 const rock = require('rock-req');
@@ -310,13 +275,13 @@ rock.defaults.retryOnError = [
 ];
 
 const opts = {
-  url     : 'http://example.com',
-  body    : 'this is the POST body',
-  maxRetry: 2 // default value. 0 = deactivate retry
+  url      : 'http://example.com',
+  body     : 'this is the POST body',
+  maxRetry : 2 // 0 is the default value (= no retries)
 }
-rock.post(opts, function (err, res) { });
-
+rock(opts, function (err, res, data) {} );
 ```
+
 
 ### Global options
 
@@ -326,34 +291,39 @@ Change default parameters globally, or create a new instance with specific param
 rock.defaults = {
   headers       : {},
   maxRedirects  : 10,
-  maxRetry      : 2,
+  maxRetry      : 0,
   retryDelay    : 100, //ms
   retryOnCode   : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
   retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
-  // WARNING: beforeRequest is also called for each retry/redirect
-  beforeRequest : (parsedOpts) => {
-    // parsedOpts is the object parsed by url.parse, with all paramaters of the query
-    parsedOpts.protocol = 'https:';
-    parsedOpts.hostname = 'google.com';
-    parsedOpts.port = 443;
-    parsedOpts.path = '/mypage.html?bla=1';
-    parsedOpts.auth = '';
-    parsedOpts.maxRetry = 2;
-    parsedOpts.maxRedirects = 10;
-    parsedOpts.remainingRetry = 1;
-    parsedOpts.remainingRedirects = 9;
-    // and all paramaters passed, except opts.url.
-    parsedOpts.headers = {};
-    parsedOpts.body = {};
-    parsedOpts.method = {}; //...
-    return parsedOpts;
+  // beforeRequest is called for each request, retry and redirect
+  beforeRequest : (opts) => {
+    // You can overwrite all these values:
+
+    opts.protocol = 'https:' //  or 'http:' 
+    opts.hostname = 'google.com';
+    opts.port = 443;
+    opts.path = '/mypage.html?bla=1';
+    opts.auth = '';
+    opts.remainingRetry; 
+    opts.remainingRedirects;
+    opts.headers = {};
+    opts.body = {};
+    opts.method = 'POST';
+    
+    // And read these values
+    opts.url;
+    opts.maxRetry;
+    opts.maxRedirects;
+
+    // opts must be returned
+    return opts;
   },
 }
 ```
 
 ### Extend and intercept retries
 
-Create a new instance with specific parameters. 
+Create a new instance with specific parameter instead of modifying `rock.defaults`
 
 By default, this new instance inherits values of the instance source if options are not overwritten. 
 Internaly, only the first level of the option object is merged with `Object.assign(currentInstanceOption, newOptions)`.
@@ -367,21 +337,20 @@ Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forw
 
 ```js
 const myInstance = rock.extend({
-  beforeRequest: (parsedOpts) => {
-    const { hostname, port, protocol, path } = parsedOpts;
-    parsedOpts.protocol = 'http:';
-    parsedOpts.hostname = '10.0.0.1';
-    parsedOpts.port = 80;
-    parsedOpts.path = `${protocol}/${hostname}/${port}/${path}`;
-    return parsedOpts;
+  beforeRequest: (opts) => {
+    const { hostname, port, protocol, path } = opts;
+    opts.protocol = 'http:';
+    opts.hostname = '10.0.0.1';
+    opts.port = 80;
+    opts.path = `${protocol}/${hostname}/${port}/${path}`;
+    return opts;
   },
   headers: {
     'Custom-header': 'x-for-proxy'
   }
 });
 
-// Then this instance can be used in your app
-myInstance.get()
+myInstance.get('http://example.com', function (err, res, data) {})
 
 ```
 
@@ -401,7 +370,7 @@ const opts = {
   },
   json: true
 }
-rock.concat(opts, function (err, res, data) {
+rock(opts, function (err, res, data) {
   if (err) throw err
   console.log(data.key) // `data` is an object
 })
@@ -421,7 +390,7 @@ const opts = {
   timeout: 2000 // 2 second timeout
 }
 
-rock(opts, function (err, res) {})
+rock(opts, function (err, res, data) {})
 ```
 
 
@@ -434,11 +403,12 @@ see how their resource is used.
 const rock = require('rock-req')
 const pkg = require('./package.json')
 
-rock('http://example.com', {
+rock({
+  url : 'http://example.com',
   headers: {
     'user-agent': `my-module/${pkg.version} (https://github.com/username/my-module)`
   }
-})
+}, function (err, res, data) {})
 ```
 
 ### Proxies
@@ -459,13 +429,15 @@ const opts = {
   })
 }
 
-rock(opts, function (err, res) {})
+rock(opts, function (err, res, data) {})
 ```
 
 ### Cookies
 
 You can use the [`cookie`](https://github.com/jshttp/cookie) module to include
 cookies in a request:
+
+You can extend and create a new instance of rock-req to keep the cookie in header for each request.
 
 ```js
 const rock = require('rock-req')
@@ -478,7 +450,7 @@ const opts = {
   }
 }
 
-rock(opts, function (err, res) {})
+rock(opts, function (err, res, data) {})
 ```
 
 ### Form data
@@ -492,14 +464,14 @@ const rock = require('rock-req')
 const FormData = require('form-data')
 const form = new FormData()
 
-form.append('my_file', fs.createReadStream('/foo/bar.jpg'))
-
 const opts = {
   url: 'http://example.com',
-  body: form
+  body: () => {
+    form.append('my_file', fs.createReadStream('/foo/bar.jpg'))
+  }
 }
 
-rock.post(opts, function (err, res) {})
+rock.post(opts, function (err, res, data) {})
 ```
 
 #### Or, include `application/x-www-form-urlencoded` form data manually:
@@ -513,7 +485,7 @@ const opts = {
     key: 'value'
   }
 }
-rock.post(opts, function (err, res) {})
+rock.post(opts, function (err, res, data) {})
 ```
 
 ### Specifically disallowing redirects
@@ -526,7 +498,7 @@ const opts = {
   followRedirects: false
 }
 // res.statusCode will be 301, no error thrown
-rock(opts, function (err, res) {})
+rock(opts, function (err, res, data) {})
 ```
 
 ### Basic Auth
@@ -583,12 +555,12 @@ rock(opts, function (err, res) {})
 You can use [limiter](https://github.com/jhurliman/node-rate-limiter) to throttle requests. This is useful when calling an API that is rate limited.
 
 ```js
-const rockReq = require('simple-get')
+const rock = require('rock-get')
 const RateLimiter = require('limiter').RateLimiter
 const limiter = new RateLimiter(1, 'second')
 
-const rock = (opts, cb) => limiter.removeTokens(1, () => rockReq(opts, cb))
-rock.concat = (opts, cb) => limiter.removeTokens(1, () => rockReq.concat(opts, cb))
+const rock = (opts, cb) => limiter.removeTokens(1, () => rock(opts, cb))
+rock.concat = (opts, cb) => limiter.removeTokens(1, () => rock.concat(opts, cb))
 
 var opts = {
   url: 'http://example.com'
@@ -604,52 +576,40 @@ function processResult (err, res, data) {
 ```
 
 
+## Breaking change for people coming from simplet-get
 
-### TODO
+Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
+
+- Rock-req concatenates chunks and returns the concatenated buffer/JSON in the third paramater of the callback.
+  Why? because 80% of the time, we need to do simple request without streams.
+  When you need to pipe the result to another stream, you must use `opts.output` parameter (see "Output Stream" in the doc)
+- All streams must be created in a function. Rock-req return an error if it is not the case
+  before: 
+    `body = stream`   
+  after
+    `body = () => { const myStream = create(); return myStream; }` 
+
+
+## Notes:
 
 - [] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
-
-
-
-## How to migrate from simple-get
-
-Streams must be created wuth a function!
-
-body = stream 
-
-body = () => { create stream }
-
-The API 
-
-
-- Make Managing reliable retries is difficult (tricky with streams), 
-- Intercept retries to use a different forward proxy path
-- Many requests libraries are heavy: node-fetch, superagent, needle, got, axios, request
-- Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
-- Use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/) is difficult because it requires URL rewritting
-
-
-
-
-##
-  - Rmeove deprecated feature of NodeJS req.abort
-  - Fix redirect
-  - HA proxy
-  - Sending a 'Connection: keep-alive' will notify Node.js that the connection to the server should be persisted until the next request.
-
-
-// TODO agent keep Alive
-// TODO le client doit avoir un socker timeout plus court que le proxy pour éviter qu'il requête dans une socket déjà tué par haproxy
-// https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
-
-https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_class_http_agent
-
-// TOdo test https://stackoverflow.com/questions/66442145/nodejs-stream-behaviour-pipeline-callback-not-called
+- TODO agent keep Alive
+- TODO le client doit avoir un socker timeout plus court que le proxy pour éviter qu'il requête dans une socket déjà tué par haproxy
+- https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
+- https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_class_http_agent
+- TOdo test https://stackoverflow.com/questions/66442145/nodejs-stream-behaviour-pipeline-callback-not-called
 
 
 # Supporters
 
-Thank you  Thank you [Feross Aboukhadijeh](https://github.com/feross).
+<p>
+  <a href="https://carbone.io" alt="Carbone.io - Efficient PDF / DOCX / XLSX / CSV / HTML / XML generator with templates and JSON">
+    <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/carbone-logo.svg" alt="Carbone.io logo" height="60"/>
+  </a>
+</p>
+
+
+Thank you [Feross Aboukhadijeh](https://github.com/feross) for inspiring us with `simple-get` 
 
 
 

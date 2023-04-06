@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const str = require('string-to-stream')
 const test = require('tape')
@@ -15,7 +15,7 @@ test('custom headers', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get({
+    rock({
       url: 'http://localhost:' + port,
       headers: {
         'custom-header': 'custom-value'
@@ -39,7 +39,7 @@ test('gzip response', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port, function (err, res, data) {
+    rock('http://localhost:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -63,7 +63,7 @@ test('bad gzip response', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port, function (err, res, data) {
+    rock('http://localhost:' + port, function (err, res, data) {
       t.ok(err instanceof Error)
       server.close()
     })
@@ -81,7 +81,7 @@ test('deflate response', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port, function (err, res, data) {
+    rock('http://localhost:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200) // statusCode still works on inflate stream
       t.equal(data.toString(), 'response')
@@ -101,7 +101,7 @@ test('br response', function (t) {
 
   server.listen(0, function () {
     const port = server.address().port
-    get('http://localhost:' + port, function (err, res, data) {
+    rock('http://localhost:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200) // statusCode still works on inflate stream
       t.equal(data.toString(), 'response')

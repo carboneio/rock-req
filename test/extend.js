@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const str = require('string-to-stream')
 const test = require('tape')
@@ -25,16 +25,16 @@ test('create new instance, merge with request header, should lower case headers'
     }
   })
   // modify current config
-  get.defaults.headers['x-test'] = 'yeah'
+  rock.defaults.headers['x-test'] = 'yeah'
   // create new instance
-  const newInstance = get.extend({
+  const newInstance = rock.extend({
     headers : {
       'Second-Header' : '12' // and should lower case 
     }
   })
   server.listen(0, function () {
     const port = server.address().port
-    get.concat({
+    rock.concat({
       url: 'http://localhost:' + port + '/origin',
       headers: {
         'custom-header': 'custom-value'
@@ -52,7 +52,7 @@ test('create new instance, merge with request header, should lower case headers'
         t.equal(data.toString(), 'instance')
         server.close()
         // reset
-        get.defaults.headers = {}
+        rock.defaults.headers = {}
       })
     })
   })
@@ -84,7 +84,7 @@ test('beforeRequest handler, combined with retries', function (t) {
   })
 
   // create new instance
-  const newInstance = get.extend({
+  const newInstance = rock.extend({
     maxRetry : 2,
     beforeRequest: (parsedOpts) => {
       const { hostname, port, protocol, path } = parsedOpts
@@ -146,7 +146,7 @@ test('beforeRequest handler, combined with redirect with absolute URL', function
   })
 
   // create new instance
-  const newInstance = get.extend({
+  const newInstance = rock.extend({
     maxRedirects : 5,
     beforeRequest: (parsedOpts) => {
       t.equal(parsedOpts.maxRedirects, 5)
@@ -202,7 +202,7 @@ test('beforeRequest handler, combined with redirect with relative URL', function
   })
 
   // create new instance
-  const newInstance = get.extend({
+  const newInstance = rock.extend({
     maxRedirects : 5,
     beforeRequest: (parsedOpts) => {
       t.equal(parsedOpts.maxRedirects, 5)

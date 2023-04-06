@@ -1,4 +1,4 @@
-const get = require('../')
+const rock = require('../')
 const http = require('http')
 const querystring = require('querystring')
 const str = require('string-to-stream')
@@ -20,7 +20,7 @@ test('post (text body)', function (t) {
       url: 'http://localhost:' + port,
       body: 'this is the body'
     }
-    get.post(opts, function (err, res, data) {
+    rock.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'this is the body')
@@ -44,7 +44,7 @@ test('post (utf-8 text body)', function (t) {
       url: 'http://localhost:' + port,
       body: 'jedan dva tri četiri'
     }
-    get.post(opts, function (err, res, data) {
+    rock.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'jedan dva tri četiri')
@@ -68,7 +68,7 @@ test('post (buffer body)', function (t) {
       url: 'http://localhost:' + port,
       body: Buffer.from('this is the body')
     }
-    get.post(opts, function (err, res, data) {
+    rock.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'this is the body')
@@ -93,7 +93,7 @@ test('post (stream body)', function (t) {
       url: 'http://localhost:' + port,
       body: () => str('this is the body')
     }
-    get.post(opts, function (err, res, data) {
+    rock.post(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'this is the body')
@@ -123,7 +123,7 @@ test('post (json body)', function (t) {
       },
       json: true
     }
-    get.concat(opts, function (err, res, data) {
+    rock.concat(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.message, 'this is the body')
@@ -152,7 +152,7 @@ test('post (form, object)', function (t) {
       url: 'http://localhost:' + port,
       form: formData
     }
-    get.concat(opts, function (err, res, data) {
+    rock.concat(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.deepEqual(querystring.parse(data.toString()), formData)
@@ -180,7 +180,7 @@ test('post (form, querystring)', function (t) {
       url: 'http://localhost:' + port,
       form: formData
     }
-    get.concat(opts, function (err, res, data) {
+    rock.concat(opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), formData)
