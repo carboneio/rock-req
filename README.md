@@ -23,7 +23,7 @@ In most libraries:
 - Many request libraries are heavy: node-fetch, superagent, needle, got, axios, request
 - Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
 
-⚡️ **Rock-req** solves these problems with only **150 lines of code** and **zero dependencies**
+⚡️ **Rock-req** solves these problems with only **160 lines of code** and **zero dependencies**
 
 It also supports many features:
 
@@ -557,7 +557,9 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
 ## Notes:
 
 - [] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
-- TODO agent keep Alive
+- [] agent keep Alive
+- [] add advanced timeout (response timeout)
+- [] test prevError
 - TODO le client doit avoir un socker timeout plus court que le proxy pour éviter qu'il requête dans une socket déjà tué par haproxy
 - https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
 - https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_class_http_agent

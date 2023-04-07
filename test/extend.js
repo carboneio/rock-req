@@ -62,7 +62,7 @@ test('create new instance, merge with request header, should lower case headers'
 
 
 test('beforeRequest handler, combined with retries', function (t) {
-  t.plan(10 + 4*3)
+  t.plan(10 + 4*3 + 1 )
 
   const server = http.createServer(function (req, res) {
     if (req.url === '/first-rewrite2') {
@@ -94,10 +94,13 @@ test('beforeRequest handler, combined with retries', function (t) {
       t.equal(parsedOpts.maxRetry, 2)
       t.equal(parsedOpts.hostname, 'localhost')
       t.equal(parsedOpts.protocol, 'http:')
-      if (parsedOpts.path === '/first' && parsedOpts.maxRetry === parsedOpts.remainingRetry)
+      if (parsedOpts.path === '/first' && parsedOpts.maxRetry === parsedOpts.remainingRetry){
         parsedOpts.path = '/first-rewrite' + parsedOpts.remainingRetry
-      if (parsedOpts.remainingRetry === (parsedOpts.maxRetry - 1))
+      }
+      if (parsedOpts.remainingRetry === (parsedOpts.maxRetry - 1)){
+        t.equal(parsedOpts.prevStatusCode, 503)
         parsedOpts.path = '/first-rewrite' + parsedOpts.remainingRetry
+      }
       if (parsedOpts.path === '/second') {
         parsedOpts.path = '/second-rewrite' + parsedOpts.remainingRetry
         parsedOpts.headers['second-header'] = 'hello'

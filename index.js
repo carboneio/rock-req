@@ -20,7 +20,7 @@ function extend(defaultOptions = {}) {
     retryDelay    : 100, //ms
     retryOnCode   : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
     retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
-    beforeRequest : (parsedURL, retryCounter) => { return parsedURL }
+    beforeRequest : o => o
   }
   defaultOptions.headers = applyDefault(cloneLowerCase(defaultOptions.headers), _default.headers)
   _default = applyDefault(defaultOptions, _default); // inherits of parent options
@@ -48,7 +48,6 @@ function extend(defaultOptions = {}) {
       body = typeof opts.form === 'string' ? opts.form : querystring.stringify(opts.form)
       opts.headers['content-type'] = 'application/x-www-form-urlencoded'
     }
-
     if (body) {
       if (isStream(body)) return cb(new Error('opts.body must be a function returning a Readable stream. RTFM'))
       if (!opts.method) opts.method = 'POST'
@@ -56,7 +55,6 @@ function extend(defaultOptions = {}) {
       if (opts.json && !opts.form) opts.headers['content-type'] = 'application/json'
     }
     if (opts.output && (isStream(opts.output) || !isFnStream(opts.output))) return cb(new Error('opts.output must be a function returning a Writable stream. RTFM'))
-
     if (opts.json) opts.headers.accept = 'application/json'
     if (opts.method) opts.method = opts.method.toUpperCase()
 
@@ -69,6 +67,7 @@ function extend(defaultOptions = {}) {
       if (requestAbortedOrEnded === true) return;
       requestAbortedOrEnded = true;
       if (opts.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
+        opts.prevError = err;
         return setTimeout(rock, opts.retryDelay, opts, cb)  // retry in 100ms
       }
       if (err) return cb(err)
@@ -80,6 +79,7 @@ function extend(defaultOptions = {}) {
       cb(null, response, data)
     }
     const req = protocol.request(opts, res => {
+      opts.prevStatusCode = res.statusCode;
       // retry and leave
       if (res.statusCode > 400 /* speed up */ && opts.retryOnCode.indexOf(res.statusCode) !== -1 && opts.remainingRetry-- > 0) {
         requestAbortedOrEnded = true // discard all new events which could come after for this request to avoid calling the callback
@@ -91,22 +91,18 @@ function extend(defaultOptions = {}) {
       if (opts.followRedirects !== false && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         requestAbortedOrEnded = true // discard all new events which could come after for this request to avoid calling the callback
         res.resume() // Discard response, consume data until the end to free up memory. Mandatory!
-
         opts.url = res.headers.location // Follow 3xx redirects
         delete opts.headers.host // Discard `host` header on redirect (see #32)
-
         const redirectHost = url.parse(opts.url).hostname // eslint-disable-line node/no-deprecated-api
         // If redirected host is different than original host, drop headers to prevent cookie leak (#73)
         if (redirectHost !== null && redirectHost !== originalHost) {
           delete opts.headers.cookie
           delete opts.headers.authorization
         }
-
         if (opts.method === 'POST' && [301, 302].includes(res.statusCode)) {
           opts.method = 'GET' // On 301/302 redirect, change POST to GET (see #35)
           delete opts.headers['content-length']; delete opts.headers['content-type']; delete opts.body; delete opts.form; // TODO test dllete body/form only on 301/302
         }
-        
         if (opts.remainingRedirects-- === 0) {
           requestAbortedOrEnded = false // TODO should we ignore inputStream error in this case?
           return onRequestEnd(new Error('too many redirects'))
@@ -117,7 +113,6 @@ function extend(defaultOptions = {}) {
       // or read response and leave at the end
       response = res;
       const contentEncoding = opts.method !== 'HEAD' ? (res.headers['content-encoding'] || '').toLowerCase() : '';
-
       const output = opts.output ? opts.output(opts, res) : new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } })
       switch (contentEncoding) {
         case 'br':
@@ -135,7 +130,6 @@ function extend(defaultOptions = {}) {
       onRequestEnd(_error) // This timeout event can come after the input pipeline is finished (ex. timeout with no body)
     })
 
-    // TODO TEST this : https://github.com/nodejs/node/issues/36674
     const _inputStream = isFnStream(body) ? body(opts) : Readable.from([body], {objectMode: false})
     pipeline(_inputStream, req, (e) => {
       if (e) onRequestEnd(e);
