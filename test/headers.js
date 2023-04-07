@@ -57,7 +57,7 @@ test('bad gzip response', function (t) {
     const text = 'Hello World!'
     const buf = Buffer.from(text, 'utf-8')
     zlib.gzip(buf, function (err, result) {
-      t.ok(err instanceof Error)
+      t.error(err)
       res.end(result.slice(0, -1))
     })
   })
