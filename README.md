@@ -41,20 +41,19 @@ It also supports many features:
 
 Like NodeJS pipeline, when the callback is called, the request is 100% finished, even with streams.
 
-## Usage
+## Install
 
-
-### Install
 
 ```
   npm install rock-req
 ```
 
-### Simple API
+## Usage
 
 All functions accept two or three parameters:
 
 ```js
+  const rock = require('rock-req')
   rock(optsOrURL [, bodyOrStreamFn], callback)
 ````
 
@@ -63,51 +62,64 @@ All functions accept two or three parameters:
 - `callback(err, res, data)` called only when everything is finished (even with streams).
 
 
-**GET, HEAD requests:**
+### GET, HEAD requests
 
 ```js
-const rock = require('rock-req')
 // res is the server response, already consumed by rock-req. The result is in data
 rock.get('http://ex.com', (err, res, data) => {
   console.log(res.statusCode) // 200
   console.log(data) // Buffer('server response')
 })
-// alternative syntax:
-rock({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
-// alternative for backward compatibility with simple-get
-rock.concat({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
+```
 
-// head:
+Alternatives syntax:
+
+```js
+rock({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
+// OR
+rock.concat({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
+```
+
+Head requests:
+
+```js
 rock.head('http://example.com', (err, res, data) => {})
 ```
 
-**POST, PUT, PATCH, HEAD, DELETE requests:**
+### POST, PUT, PATCH, DELETE requests
+
+Use the second paramater to pass the body:
 
 ```js
-const rock = require('rock-req')
 rock.post('http://ex.com', 'POST body', (err, res, data) => {})
-// alternative syntax:
-rock({ method: 'POST', url : 'http://ex.com', body : 'POST body'}, function (err, res, data) {} )
 ```
 
-**POST, PUT, PATCH, HEAD, DELETE requests for JSON:**
+Alternatives syntax:
+
+```js
+rock({ method: 'POST', url : 'http://ex.com', body : 'POST body' }, function (err, res, data) {} )
+```
+
+### POST, PUT, PATCH, HEAD, DELETE requests for JSON
 
 Automatically serialize/deserialize request and response with JSON with `getJSON`, `putJSON`, `postJSON`, `deleteJSON`, ...
 
 ```js
-const rock = require('rock-req')
 rock.putJSON('http://ex.com', { id : 123 }, (err, res, data) => {
   console.log(data) // already JSON.parsed
 })
-// alternative syntax:
+```
+
+Alternatives syntax:
+
+```js
 rock({ method: 'PUT', url: 'http://ex.com', body: { id : 123 }, json: true }, function (err, res, data) {} )
 ```
 
-
 ### All options:
 
+
 ```js
-const rock = require('rock-req')
 const opts = {
   url    : 'http://example.com',
   method : 'POST',
@@ -128,7 +140,7 @@ rock(opts, function (err, res, data) {} )
   - `json <boolean>` automatically stringify/parse request/response Default : false
   - `url <string>` the destination URL
   - `method <string>` A string specifying the HTTP request method. Default: 'GET'.
-  - `headers <Object>` An object containing request headers.
+  - `headers <object>` An object containing request headers. Default: 'accept-encoding': 'gzip, deflate, br'
   - `timeout <number>`: A number specifying the socket timeout in milliseconds.
   - `auth <string>` Basic authentication ('user:password') to compute an Authorization header.
   - `port <number>` Port of remote server. Default: defaultPort if set, else 80.
@@ -538,10 +550,8 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
   Why? because 80% of the time, we need to do simple request without streams.
   When you need to pipe the result to another stream, you must use `opts.output` parameter (see "Output Stream" in the doc)
 - All streams must be created in a function. Rock-req return an error if it is not the case
-  before: 
-    `body = stream`   
-  after
-    `body = () => { const myStream = create(); return myStream; }` 
+  - before:  `body = stream`   
+  - after `body = () => { const myStream = create(); return myStream; }` 
 
 
 ## Notes:
