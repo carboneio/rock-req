@@ -281,11 +281,11 @@ rock.defaults = {
   retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
   // beforeRequest is called for each request, retry and redirect
   beforeRequest : (opts) => {
-    // Read or Overwrite these options
+    // There options can be overwritted (= parsed opts.url)
     opts.protocol = 'https:' //  or 'http:' 
     opts.hostname = 'google.com';
     opts.port = 443;
-    opts.path = '/mypage.html?bla=1';
+    opts.path = '/mypage.html?bla=1#hash';
     opts.auth = '';
     opts.headers = {};
     opts.body = {};
@@ -294,7 +294,7 @@ rock.defaults = {
     opts.remainingRedirects;
     
     // READ-ONLY options (not exhaustive)
-    opts.url;
+    opts.url; // DOT NOT OVERWRITE
     opts.maxRetry;
     opts.maxRedirects;
     opts.prevError; // error of previous request on retry
@@ -317,7 +317,8 @@ Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forw
 
 `beforeRequest` is always called on each redirect/retry.
   - on redirect, `opts.url` (and `hostname`, `port`, `protocol`, `path`) is updated to the new location
-  - on retry, `opts.url` (and `hostname`, `port`, `protocol`, `path`) have the same value as they did when the rock-req was initially called
+  - on retry, `opts.url` (and `hostname`, `port`, `protocol`, `path`) have the same value as they did
+    when the rock-req was initially called.
 
 
 ```js
@@ -327,7 +328,7 @@ const myInstance = rock.extend({
     opts.protocol = 'http:';
     opts.hostname = '10.0.0.1';
     opts.port = 80;
-    opts.path = `${protocol}/${hostname}/${port}/${path}`;
+    opts.path = `${encodeURIComponent(hostname)}/${port}${path}`;
     return opts;
   },
   headers: {
