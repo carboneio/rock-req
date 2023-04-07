@@ -72,7 +72,7 @@ rock.get('http://ex.com', (err, res, data) => {
 })
 ```
 
-Alternatives syntax:
+Alternative syntax:
 
 ```js
 rock({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
@@ -94,13 +94,13 @@ Use the second paramater to pass the body:
 rock.post('http://ex.com', 'POST body', (err, res, data) => {})
 ```
 
-Alternatives syntax:
+Alternative syntax:
 
 ```js
 rock({ method: 'POST', url : 'http://ex.com', body : 'POST body' }, function (err, res, data) {} )
 ```
 
-### POST, PUT, PATCH, HEAD, DELETE requests for JSON
+### JSON shorcuts
 
 Automatically serialize/deserialize request and response with JSON with `getJSON`, `putJSON`, `postJSON`, `deleteJSON`, ...
 
@@ -110,7 +110,7 @@ rock.putJSON('http://ex.com', { id : 123 }, (err, res, data) => {
 })
 ```
 
-Alternatives syntax:
+Alternative syntax:
 
 ```js
 rock({ method: 'PUT', url: 'http://ex.com', body: { id : 123 }, json: true }, function (err, res, data) {} )
@@ -556,14 +556,10 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
 
 ## Notes:
 
-- [] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
-- [] agent keep Alive
-- [] add advanced timeout (response timeout)
-- [] test prevError
-- TODO le client doit avoir un socker timeout plus court que le proxy pour éviter qu'il requête dans une socket déjà tué par haproxy
-- https://connectreport.com/blog/tuning-http-keep-alive-in-node-js/
-- https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_class_http_agent
-- TOdo test https://stackoverflow.com/questions/66442145/nodejs-stream-behaviour-pipeline-callback-not-called
+- [ ] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
+- [ ] agent keep Alive
+- [ ] add advanced timeout (response timeout)
+- [ ] test prevError
 
 
 # Supporters
