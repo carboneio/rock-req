@@ -15,8 +15,7 @@ test('create new instance, merge with request header, should lower case headers'
       t.equal(req.headers['second-header'], undefined)
       t.equal(req.headers['custom-header'], 'custom-value')
       res.end('origin')
-    }
-    else if (req.url === '/instance') {
+    } else if (req.url === '/instance') {
       t.equal(req.url, '/instance')
       t.equal(req.headers['x-test'], undefined)
       t.equal(req.headers['second-header'], '12')
@@ -28,8 +27,8 @@ test('create new instance, merge with request header, should lower case headers'
   rock.defaults.headers['x-test'] = 'yeah'
   // create new instance
   const newInstance = rock.extend({
-    headers : {
-      'Second-Header' : '12' // and should lower case 
+    headers: {
+      'Second-Header': '12' // and should lower case
     }
   })
   server.listen(0, function () {
@@ -54,15 +53,14 @@ test('create new instance, merge with request header, should lower case headers'
         t.deepEqual(newInstance.defaults.headers, { 'second-header': '12', 'accept-encoding': 'gzip, deflate, br' })
         t.deepEqual(rock.defaults.headers, { 'accept-encoding': 'gzip, deflate, br', 'x-test': 'yeah' })
         // reset
-        delete rock.defaults.headers['x-test'];
+        delete rock.defaults.headers['x-test']
       })
     })
   })
 })
 
-
 test('beforeRequest handler, combined with retries', function (t) {
-  t.plan(10 + 4*3 + 1 )
+  t.plan(10 + 4 * 3 + 1)
 
   const server = http.createServer(function (req, res) {
     if (req.url === '/first-rewrite2') {
@@ -70,14 +68,12 @@ test('beforeRequest handler, combined with retries', function (t) {
       t.equal(req.headers['second-header'], undefined)
       res.statusCode = 503
       res.end('first-rewrite2')
-    }
-    else if (req.url === '/first-rewrite1') {
+    } else if (req.url === '/first-rewrite1') {
       t.equal(req.url, '/first-rewrite1')
       t.equal(req.headers['second-header'], undefined)
       res.statusCode = 200
       res.end('first-rewrite1')
-    }
-    else if (req.url === '/second-rewrite2') {
+    } else if (req.url === '/second-rewrite2') {
       t.equal(req.url, '/second-rewrite2')
       t.equal(req.headers['second-header'], 'hello')
       res.statusCode = 200
@@ -87,17 +83,17 @@ test('beforeRequest handler, combined with retries', function (t) {
 
   // create new instance
   const newInstance = rock.extend({
-    maxRetry : 2,
+    maxRetry: 2,
     beforeRequest: (parsedOpts) => {
       const { hostname, port, protocol, path } = parsedOpts
       t.equal(parsedOpts.maxRedirects, 10)
       t.equal(parsedOpts.maxRetry, 2)
       t.equal(parsedOpts.hostname, 'localhost')
       t.equal(parsedOpts.protocol, 'http:')
-      if (parsedOpts.path === '/first' && parsedOpts.maxRetry === parsedOpts.remainingRetry){
+      if (parsedOpts.path === '/first' && parsedOpts.maxRetry === parsedOpts.remainingRetry) {
         parsedOpts.path = '/first-rewrite' + parsedOpts.remainingRetry
       }
-      if (parsedOpts.remainingRetry === (parsedOpts.maxRetry - 1)){
+      if (parsedOpts.remainingRetry === (parsedOpts.maxRetry - 1)) {
         t.equal(parsedOpts.prevStatusCode, 503)
         parsedOpts.path = '/first-rewrite' + parsedOpts.remainingRetry
       }
@@ -106,7 +102,7 @@ test('beforeRequest handler, combined with retries', function (t) {
         parsedOpts.headers['second-header'] = 'hello'
       }
       return parsedOpts
-    },
+    }
   })
 
   server.listen(0, function () {
@@ -130,9 +126,8 @@ test('beforeRequest handler, combined with retries', function (t) {
   })
 })
 
-
 test('beforeRequest handler, combined with redirect with absolute URL', function (t) {
-  t.plan(5 + 2*4)
+  t.plan(5 + 2 * 4)
 
   let httpsPort = null
   let httpPort = null
@@ -152,7 +147,7 @@ test('beforeRequest handler, combined with redirect with absolute URL', function
 
   // create new instance
   const newInstance = rock.extend({
-    maxRedirects : 5,
+    maxRedirects: 5,
     beforeRequest: (parsedOpts) => {
       t.equal(parsedOpts.maxRedirects, 5)
       if (parsedOpts.remainingRedirects === 5) {
@@ -167,7 +162,7 @@ test('beforeRequest handler, combined with redirect with absolute URL', function
         t.equal(parsedOpts.protocol, 'https:')
       }
       return parsedOpts
-    },
+    }
   })
 
   httpServer.listen(0, function () {
@@ -188,7 +183,6 @@ test('beforeRequest handler, combined with redirect with absolute URL', function
   })
 })
 
-
 test('beforeRequest handler, combined with redirect with relative URL', function (t) {
   t.plan(5 + 4 + 3)
 
@@ -208,7 +202,7 @@ test('beforeRequest handler, combined with redirect with relative URL', function
 
   // create new instance
   const newInstance = rock.extend({
-    maxRedirects : 5,
+    maxRedirects: 5,
     beforeRequest: (parsedOpts) => {
       t.equal(parsedOpts.maxRedirects, 5)
       if (parsedOpts.remainingRedirects === 5) {
@@ -222,7 +216,7 @@ test('beforeRequest handler, combined with redirect with relative URL', function
         t.equal(parsedOpts.path, '/path2')
       }
       return parsedOpts
-    },
+    }
   })
 
   httpServer.listen(0, function () {

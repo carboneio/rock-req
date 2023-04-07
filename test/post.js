@@ -3,7 +3,7 @@ const http = require('http')
 const querystring = require('querystring')
 const str = require('string-to-stream')
 const test = require('tape')
-const { Readable } = require('stream');
+const { Readable } = require('stream')
 
 test('post (text body)', function (t) {
   t.plan(4)
@@ -112,7 +112,7 @@ test('post (stream body) with second function parameter', function (t) {
     req.pipe(res)
   })
 
-  const _stream = () => str('this is the body');
+  const _stream = () => str('this is the body')
 
   server.listen(0, function () {
     const port = server.address().port
@@ -124,7 +124,6 @@ test('post (stream body) with second function parameter', function (t) {
     })
   })
 })
-
 
 test('post (json body)', function (t) {
   t.plan(5)

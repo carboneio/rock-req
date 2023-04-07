@@ -54,11 +54,11 @@ test('bad gzip response', function (t) {
   const server = http.createServer(function (req, res) {
     res.statusCode = 200
     res.setHeader('content-encoding', 'gzip')
-    const text = 'Hello World!';
-    const buf = Buffer.from(text, 'utf-8');
+    const text = 'Hello World!'
+    const buf = Buffer.from(text, 'utf-8')
     zlib.gzip(buf, function (err, result) {
-      res.end(result.slice(0, -1));
-    });
+      res.end(result.slice(0, -1))
+    })
   })
 
   server.listen(0, function () {

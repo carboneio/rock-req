@@ -114,7 +114,7 @@ test('timeout option', function (t) {
     rock({
       url: 'http://localhost:' + port + '/path',
       timeout: 1000,
-      maxRetry : 0
+      maxRetry: 0
     }, function (err, res) {
       t.ok(err instanceof Error)
       server.close()

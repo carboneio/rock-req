@@ -2,7 +2,7 @@ const rock = require('../')
 const http = require('http')
 const str = require('string-to-stream')
 const test = require('tape')
-const { pipeline , Writable, Readable, finished, PassThrough} = require('stream');
+const { pipeline, Writable, Readable, finished, PassThrough } = require('stream')
 
 test('rock.concat (post, stream body, and json option)', function (t) {
   t.plan(4)
@@ -93,10 +93,10 @@ test('should concat multiple parts', function (t) {
   t.plan(4)
   const server = http.createServer(function (req, res) {
     res.statusCode = 200
-    res.write('12345');
-    setTimeout(()=> {
-      res.end('6789');
-    }, 1000);
+    res.write('12345')
+    setTimeout(() => {
+      res.end('6789')
+    }, 1000)
   })
 
   server.listen(0, function () {
