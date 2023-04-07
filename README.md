@@ -100,7 +100,7 @@ Alternative syntax:
 rock({ method: 'POST', url : 'http://ex.com', body : 'POST body' }, function (err, res, data) {} )
 ```
 
-### JSON shorcuts
+### JSON request shortcuts
 
 Automatically serialize/deserialize request and response with JSON with `getJSON`, `putJSON`, `postJSON`, `deleteJSON`, ...
 
@@ -223,7 +223,7 @@ const opts = {
   url    : 'http://example.com',
   output : createOutputStream
 }
-rock(opts, function (err, res, data) {})
+rock(opts, function (err, res) {})
 ```
 
 ### Retry on failure
@@ -573,7 +573,7 @@ This packaged in maintained by Carbone:
 </p>
 
 
-Thank you [Feross Aboukhadijeh](https://github.com/feross) for inspiring us with `simple-get` 
+Thank you [Feross Aboukhadijeh](https://github.com/feross), creator of `simple-get` 
 
 
 
