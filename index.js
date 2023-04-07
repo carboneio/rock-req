@@ -9,10 +9,12 @@ const { pipeline , Writable, Readable, finished} = require('stream');
 
 const isStream = o => o !== null && typeof o === 'object' && typeof o.pipe === 'function'
 const isFnStream = o => o instanceof Function
+function applyDefault (t, d) { for(let a in d) { if (t[a] === undefined) t[a] = d[a] } return t; }
+function cloneLowerCase (s) { const n = {}; for(let a in s) { n[a.toLowerCase()] = s[a] } return n; }
 
-function extend(defaultOptions) {
+function extend(defaultOptions = {}) {
   var _default = {
-    headers       : {},
+    headers       : { 'accept-encoding': 'gzip, deflate, br' },
     maxRedirects  : 10,
     maxRetry      : 0,
     retryDelay    : 100, //ms
@@ -20,11 +22,15 @@ function extend(defaultOptions) {
     retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
     beforeRequest : (parsedURL, retryCounter) => { return parsedURL }
   }
-  _default = Object.assign(_default, defaultOptions); // inherits of parent options
+  defaultOptions.headers = applyDefault(cloneLowerCase(defaultOptions.headers), _default.headers)
+  _default = applyDefault(defaultOptions, _default); // inherits of parent options
 
   // all options https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_http_request_url_options_callback
-  function simpleGet (opts, cb) {
-    opts = Object.assign({ maxRedirects: _default.maxRedirects, maxRetry: _default.maxRetry }, typeof opts === 'string' ? { url: opts } : opts)
+  function rock (opts, directBody, cb) {
+    if (typeof opts === 'string') opts = { url : opts }
+    if (!cb) { cb = directBody } else { opts.body = directBody }
+    opts.headers = applyDefault(cloneLowerCase(opts.headers), _default.headers)
+    opts = applyDefault(opts, _default)
     opts.remainingRetry = opts.remainingRetry ?? opts.maxRetry;
     opts.remainingRedirects = opts.remainingRedirects ?? opts.maxRedirects;
 
@@ -33,12 +39,7 @@ function extend(defaultOptions) {
       if (!hostname && !port && !protocol && !auth) opts.path = path // Relative redirect
       else Object.assign(opts, { hostname, port, protocol, auth, path }) // Absolute redirect
     }
-    opts = _default.beforeRequest(opts)
-
-    const headers = { 'accept-encoding': 'gzip, deflate, br' }
-    if (_default.headers) Object.keys(_default.headers).forEach(k => (headers[k.toLowerCase()] = _default.headers[k]))
-    if (opts.headers) Object.keys(opts.headers).forEach(k => (headers[k.toLowerCase()] = opts.headers[k]))
-    opts.headers = headers
+    opts = opts.beforeRequest(opts)
 
     let body
     if (opts.body) {
@@ -67,8 +68,8 @@ function extend(defaultOptions) {
     function onRequestEnd(err) {
       if (requestAbortedOrEnded === true) return;
       requestAbortedOrEnded = true;
-      if (_default.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
-        return setTimeout(simpleGet, _default.retryDelay, opts, cb)  // retry in 100ms
+      if (opts.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
+        return setTimeout(rock, opts.retryDelay, opts, cb)  // retry in 100ms
       }
       if (err) return cb(err)
       let data = Buffer.concat(chunks);
@@ -80,10 +81,10 @@ function extend(defaultOptions) {
     }
     const req = protocol.request(opts, res => {
       // retry and leave
-      if (res.statusCode > 400 /* speed up */ && _default.retryOnCode.indexOf(res.statusCode) !== -1 && opts.remainingRetry-- > 0) {
+      if (res.statusCode > 400 /* speed up */ && opts.retryOnCode.indexOf(res.statusCode) !== -1 && opts.remainingRetry-- > 0) {
         requestAbortedOrEnded = true // discard all new events which could come after for this request to avoid calling the callback
         res.resume() // Discard response, consume data until the end to free up memory. Mandatory!
-        return setTimeout(simpleGet, _default.retryDelay, opts, cb) // retry later
+        return setTimeout(rock, opts.retryDelay, opts, cb) // retry later
       }
 
       // or redirect and leave
@@ -110,7 +111,7 @@ function extend(defaultOptions) {
           requestAbortedOrEnded = false // TODO should we ignore inputStream error in this case?
           return onRequestEnd(new Error('too many redirects'))
         } 
-        return simpleGet(opts, cb)
+        return rock(opts, cb)
       }
 
       // or read response and leave at the end
@@ -143,16 +144,19 @@ function extend(defaultOptions) {
     return req
   }
 
-
-  ;['get', 'post', 'put', 'patch', 'head', 'delete'].forEach(method => {
-    simpleGet[method] = (opts, cb) => {
+  ;['get', 'post', 'put', 'patch', 'head', 'delete', 'getJSON', 'postJSON', 'putJSON', 'patchJSON', 'headJSON', 'deleteJSON'].forEach(method => {
+    const jsonShortcut = /JSON$/.test(method) === true
+    const methodShortcut = jsonShortcut === true ? method.toUpperCase().slice(0, -4) : method.toUpperCase();
+    rock[method] = (opts, body, cb) => {
       if (typeof opts === 'string') opts = { url: opts }
-      return simpleGet(Object.assign({ method: method.toUpperCase() }, opts), cb)
+      opts.method = methodShortcut; 
+      opts.json = jsonShortcut;
+      return rock(opts, body, cb)
     }
   })
-  simpleGet.concat = simpleGet;
-  simpleGet.defaults = _default;
-  simpleGet.extend = extend;
+  rock.concat = rock;
+  rock.defaults = _default;
+  rock.extend = extend;
 
-  return simpleGet
+  return rock
 }

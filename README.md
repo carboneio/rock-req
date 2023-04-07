@@ -50,113 +50,83 @@ Like NodeJS pipeline, when the callback is called, the request is 100% finished,
   npm install rock-req
 ```
 
-### GET, HEAD requests
+### Simple API
 
-Here is how to do a simple get:
+All functions accept two or three parameters:
 
+```js
+  rock(optsOrURL [, bodyOrStreamFn], callback)
+````
+
+- `optsOrURL` can be an object or a the URL 
+- `bodyOrStreamFn` can be a buffer/string/object or a function returning an input stream for sending the body of POST/PUT/PATCH/DELETE requests
+- `callback(err, res, data)` called only when everything is finished (even with streams).
+
+
+**GET, HEAD requests:**
 
 ```js
 const rock = require('rock-req')
-
-rock.get('http://example.com', function (err, res, data) {
-  if (err) throw err
-  console.log(data) // Buffer('this is the server response')
-})
-```
-
-Alternatives syntax:
-
-```js
-rock('http://example.com', function (err, res, data) {} )
-// or
-const opts = {
-  url   : 'http://example.com',
-  method: 'GET'
-}
-// or
-rock(opts, function (err, res, data) {} )
-// or
-rock.get(opts, function (err, res, data) {} )
-```
-
-### POST, PUT, PATCH, HEAD, DELETE requests
-
-// TODO
-
-
-```js
-const rock = require('rock-req')
-
-const opts = {
-  url: 'http://example.com',
-  body: 'this is the POST body'
-}
-rock.post(opts, body, function (err, res, data) {
-  if (err) throw err
-  console.log(data) // Buffer('this is the server response')
-})
-
-rock('http://example.com', function (err, res, data) {
-  // res is the 
-  if (err) throw err
+// res is the server response, already consumed by rock-req. The result is in data
+rock.get('http://ex.com', (err, res, data) => {
   console.log(res.statusCode) // 200
-  console.log(data) // Buffer('this is the server response')
+  console.log(data) // Buffer('server response')
 })
+// alternative syntax:
+rock({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
+// alternative for backward compatibility with simple-get
+rock.concat({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
+
+// head:
+rock.head('http://example.com', (err, res, data) => {})
 ```
 
-### GET, POST, PUT, PATCH, HEAD, DELETE
-
-For `POST`, call `rock.post` or use option `{ method: 'POST' }`.
+**POST, PUT, PATCH, HEAD, DELETE requests:**
 
 ```js
 const rock = require('rock-req')
+rock.post('http://ex.com', 'POST body', (err, res, data) => {})
+// alternative syntax:
+rock({ method: 'POST', url : 'http://ex.com', body : 'POST body'}, function (err, res, data) {} )
+```
 
+**POST, PUT, PATCH, HEAD, DELETE requests for JSON:**
+
+Automatically serialize/deserialize request and response with JSON with `getJSON`, `putJSON`, `postJSON`, `deleteJSON`, ...
+
+```js
+const rock = require('rock-req')
+rock.putJSON('http://ex.com', { id : 123 }, (err, res, data) => {
+  console.log(data) // already JSON.parsed
+})
+// alternative syntax:
+rock({ method: 'PUT', url: 'http://ex.com', body: { id : 123 }, json: true }, function (err, res, data) {} )
+```
+
+
+### All options:
+
+```js
+const rock = require('rock-req')
 const opts = {
-  url: 'http://example.com',
-  body: 'this is the POST body'
-}
-rock.post(opts, function (err, res, data) {
-  if (err) throw err
-  console.log(data) // Buffer('this is the server response')
-})
-```
-
-Alternative syntax:
-
-```js
-  rock.post(opts, body, function (err, res, data) {} )
-  rock.post('http://example.com', body, function (err, res, data) {} )
-```
-
-### Complex example with all options:
-
-```js
-const rock = require('rock-req')
-
-rock({
   url    : 'http://example.com',
   method : 'POST',
   body   : 'this is the POST body',
   headers: {
     'user-agent': 'my cool app'
   }
-}, function (err, res, data) {
-  if (err) throw err
-
-  // All properties/methods from http.IncomingResponse are available,
-  // even if a gunzip/inflate transform stream was returned.
-  console.log(res.headers)
-  console.log(data)
-})
+}
+rock(opts, function (err, res, data) {} )
 ```
 
-**opts** can contain any value of NodeJS http.request with. Here are the most used one:
+**opts** can contain any value of NodeJS http.request with rock-req parameters. Here are the most used one:
 
   - `maxRedirects <number>`overwrite global maximum number of redirects. Defaults to 10
   - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 0
-  - `body`
-  - `json`
-  - `url`
+  - `followRedirects <boolean>` do not follow redirects
+  - `body <buffer> | <string> | <object> | <function>` body to post
+  - `json <boolean>` automatically stringify/parse request/response Default : false
+  - `url <string>` the destination URL
   - `method <string>` A string specifying the HTTP request method. Default: 'GET'.
   - `headers <Object>` An object containing request headers.
   - `timeout <number>`: A number specifying the socket timeout in milliseconds.
@@ -246,7 +216,9 @@ rock(opts, function (err, res, data) {})
 
 ### Retry on failure
 
-By default, rock-req retries with the following errors if `maxRetry > 1`
+By default, rock-req retries with the following errors if `maxRetry > 1`.
+
+The callback is called when all the request succeed or all retries are done
 
 ```js 
 const rock = require('rock-req');
@@ -285,11 +257,11 @@ rock(opts, function (err, res, data) {} );
 
 ### Global options
 
-Change default parameters globally, or create a new instance with specific paramaters (see below)
+Change default parameters globally (not recommended), or create a new instance with specific paramaters (see below)
 
 ```js
 rock.defaults = {
-  headers       : {},
+  headers       : { 'accept-encoding': 'gzip, deflate, br' },
   maxRedirects  : 10,
   maxRetry      : 0,
   retryDelay    : 100, //ms
@@ -297,23 +269,24 @@ rock.defaults = {
   retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
   // beforeRequest is called for each request, retry and redirect
   beforeRequest : (opts) => {
-    // You can overwrite all these values:
-
+    // Read or Overwrite these options
     opts.protocol = 'https:' //  or 'http:' 
     opts.hostname = 'google.com';
     opts.port = 443;
     opts.path = '/mypage.html?bla=1';
     opts.auth = '';
-    opts.remainingRetry; 
-    opts.remainingRedirects;
     opts.headers = {};
     opts.body = {};
     opts.method = 'POST';
+    opts.remainingRetry; 
+    opts.remainingRedirects;
     
-    // And read these values
+    // READ-ONLY options (not exhaustive)
     opts.url;
     opts.maxRetry;
     opts.maxRedirects;
+    opts.prevError; // error of previous request on retry
+    opts.prevStatusCode; // HTTP status code of previous request on retry/redirect
 
     // opts must be returned
     return opts;
@@ -326,7 +299,7 @@ rock.defaults = {
 Create a new instance with specific parameter instead of modifying `rock.defaults`
 
 By default, this new instance inherits values of the instance source if options are not overwritten. 
-Internaly, only the first level of the option object is merged with `Object.assign(currentInstanceOption, newOptions)`.
+Headers are merged. Then only the first level of the options object is merged (no deep travelling in sub-objects or arrays).
 
 Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
 
@@ -347,7 +320,8 @@ const myInstance = rock.extend({
   },
   headers: {
     'Custom-header': 'x-for-proxy'
-  }
+  },
+  timeout : 1000
 });
 
 myInstance.get('http://example.com', function (err, res, data) {})
@@ -355,26 +329,6 @@ myInstance.get('http://example.com', function (err, res, data) {})
 ```
 
 
-### JSON
-
-You can serialize/deserialize request and response with JSON:
-
-```js
-const rock = require('rock-req')
-
-const opts = {
-  method: 'POST',
-  url: 'http://example.com',
-  body: {
-    key: 'value'
-  },
-  json: true
-}
-rock(opts, function (err, res, data) {
-  if (err) throw err
-  console.log(data.key) // `data` is an object
-})
-```
 
 ### Timeout
 
@@ -601,6 +555,8 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
 
 
 # Supporters
+
+This packaged in maintained by Carbone:
 
 <p>
   <a href="https://carbone.io" alt="Carbone.io - Efficient PDF / DOCX / XLSX / CSV / HTML / XML generator with templates and JSON">

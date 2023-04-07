@@ -157,11 +157,13 @@ test('should retry even if there is a timeout', function (t) {
   })
 })
 
-test('should retry with POST even if there is a timeout', function (t) {
-  t.plan(5)
+test('should retry with POST even if there is a timeout. SHould keep headers on each retry', function (t) {
+  t.plan(9)
   var nbRequestTimeout = 1;
   const server = http.createServer(function (req, res) {
     t.equal(req.method, 'POST')
+    t.equal(req.headers['x-test'], '145')
+    t.equal(req.headers['accept-encoding'], 'gzip, deflate, br')
     if (nbRequestTimeout === 0) {
       res.statusCode = 200
       req.pipe(res)
@@ -179,6 +181,7 @@ test('should retry with POST even if there is a timeout', function (t) {
       url: 'http://localhost:' + port + '/path',
       body : 'body message',
       method : 'POST',
+      headers : {'X-TEST' : '145'},
       timeout: 1000,
       maxRetry: 2
     }, function (err, res, data) {
@@ -190,6 +193,33 @@ test('should retry with POST even if there is a timeout', function (t) {
   })
 })
 
+test('should retry with postJSON function and accept to set a default global timeout', function (t) {
+  t.plan(5)
+  var nbRequestTimeout = 1;
+  const server = http.createServer(function (req, res) {
+    t.equal(req.method, 'POST')
+    if (nbRequestTimeout === 0) {
+      res.statusCode = 200
+      req.pipe(res)
+      return
+    }
+    nbRequestTimeout--;
+    setTimeout(function () {
+      // response should not be sent
+      res.end('response')
+    }, 1000)
+  })
+  const newInstance = rock.extend({ maxRetry : 2, timeout: 500 })
+  server.listen(0, function () {
+    const port = server.address().port
+    newInstance.post('http://localhost:' + port + '/path', 'body message', function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(data.toString(), 'body message')
+      server.close()
+    })
+  })
+})
 
 test('should retry if the error is coming from the server after receiving the first response', function (t) {
   t.plan(5)

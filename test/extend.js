@@ -6,7 +6,7 @@ const zlib = require('zlib')
 const selfSignedHttps = require('self-signed-https')
 
 test('create new instance, merge with request header, should lower case headers', function (t) {
-  t.plan(12)
+  t.plan(14)
   const server = http.createServer(function (req, res) {
     res.statusCode = 200
     if (req.url === '/origin') {
@@ -51,8 +51,10 @@ test('create new instance, merge with request header, should lower case headers'
         t.error(err)
         t.equal(data.toString(), 'instance')
         server.close()
+        t.deepEqual(newInstance.defaults.headers, { 'second-header': '12', 'accept-encoding': 'gzip, deflate, br' })
+        t.deepEqual(rock.defaults.headers, { 'accept-encoding': 'gzip, deflate, br', 'x-test': 'yeah' })
         // reset
-        rock.defaults.headers = {}
+        delete rock.defaults.headers['x-test'];
       })
     })
   })

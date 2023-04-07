@@ -102,6 +102,29 @@ test('post (stream body)', function (t) {
   })
 })
 
+test('post (stream body) with second function parameter', function (t) {
+  t.plan(5)
+
+  const server = http.createServer(function (req, res) {
+    t.equal(req.method, 'POST')
+    res.statusCode = 200
+    t.notOk(req.headers['content-length'])
+    req.pipe(res)
+  })
+
+  const _stream = () => str('this is the body');
+
+  server.listen(0, function () {
+    const port = server.address().port
+    rock.post('http://localhost:' + port, _stream, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(data.toString(), 'this is the body')
+      server.close()
+    })
+  })
+})
+
 
 test('post (json body)', function (t) {
   t.plan(5)
@@ -124,6 +147,54 @@ test('post (json body)', function (t) {
       json: true
     }
     rock.concat(opts, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(data.message, 'this is the body')
+      server.close()
+    })
+  })
+})
+
+test('should accept postJSON as a shortcut', function (t) {
+  t.plan(5)
+
+  const server = http.createServer(function (req, res) {
+    t.equal(req.method, 'POST')
+    t.equal(req.headers['content-type'], 'application/json')
+    res.statusCode = 200
+    req.pipe(res)
+  })
+
+  server.listen(0, function () {
+    const port = server.address().port
+    const opts = {
+      message: 'this is the body'
+    }
+    rock.postJSON('http://localhost:' + port, opts, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(data.message, 'this is the body')
+      server.close()
+    })
+  })
+})
+
+test('should accept putJSON as a shortcut', function (t) {
+  t.plan(5)
+
+  const server = http.createServer(function (req, res) {
+    t.equal(req.method, 'PUT')
+    t.equal(req.headers['content-type'], 'application/json')
+    res.statusCode = 200
+    req.pipe(res)
+  })
+
+  server.listen(0, function () {
+    const port = server.address().port
+    const opts = {
+      message: 'this is the body'
+    }
+    rock.putJSON('http://localhost:' + port, opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.message, 'this is the body')
