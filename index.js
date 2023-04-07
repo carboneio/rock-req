@@ -5,7 +5,7 @@ const https = require('https')
 const querystring = require('querystring')
 const url = require('url')
 const zlib = require('zlib')
-const { pipeline, Writable, Readable, finished } = require('stream')
+const { pipeline, Writable, Readable } = require('stream')
 
 const isStream = o => o !== null && typeof o === 'object' && typeof o.pipe === 'function'
 const isFnStream = o => o instanceof Function

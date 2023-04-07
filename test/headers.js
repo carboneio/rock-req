@@ -49,7 +49,7 @@ test('gzip response', function (t) {
 })
 
 test('bad gzip response', function (t) {
-  t.plan(1)
+  t.plan(2)
 
   const server = http.createServer(function (req, res) {
     res.statusCode = 200
@@ -57,6 +57,7 @@ test('bad gzip response', function (t) {
     const text = 'Hello World!'
     const buf = Buffer.from(text, 'utf-8')
     zlib.gzip(buf, function (err, result) {
+      t.ok(err instanceof Error)
       res.end(result.slice(0, -1))
     })
   })

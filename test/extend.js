@@ -1,8 +1,6 @@
 const rock = require('../')
 const http = require('http')
-const str = require('string-to-stream')
 const test = require('tape')
-const zlib = require('zlib')
 const selfSignedHttps = require('self-signed-https')
 
 test('create new instance, merge with request header, should lower case headers', function (t) {
@@ -85,7 +83,6 @@ test('beforeRequest handler, combined with retries', function (t) {
   const newInstance = rock.extend({
     maxRetry: 2,
     beforeRequest: (parsedOpts) => {
-      const { hostname, port, protocol, path } = parsedOpts
       t.equal(parsedOpts.maxRedirects, 10)
       t.equal(parsedOpts.maxRetry, 2)
       t.equal(parsedOpts.hostname, 'localhost')

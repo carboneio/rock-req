@@ -3,7 +3,6 @@ const http = require('http')
 const querystring = require('querystring')
 const str = require('string-to-stream')
 const test = require('tape')
-const { Readable } = require('stream')
 
 test('post (text body)', function (t) {
   t.plan(4)

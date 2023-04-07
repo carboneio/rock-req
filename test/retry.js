@@ -1,10 +1,7 @@
 const rock = require('../')
 const http = require('http')
-const net = require('net')
-const selfSignedHttps = require('self-signed-https')
-const str = require('string-to-stream')
 const test = require('tape')
-const { pipeline, Writable, Readable, finished, PassThrough } = require('stream')
+const { Writable, Readable, finished } = require('stream')
 
 test('should retry if there is socket errors', function (t) {
   t.plan(4 * 8)
@@ -78,7 +75,7 @@ test('should not retry if maxRetry < 0', function (t) {
 })
 
 test('should retry "maxRetry" max on HTTP code error', function (t) {
-  t.plan(9)
+  t.plan(10)
   let nbTry = 0
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/path')
@@ -94,6 +91,7 @@ test('should retry "maxRetry" max on HTTP code error', function (t) {
     }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 503)
+      t.equal(nbTry, 6)
       t.equal(data.toString(), 'response')
       server.close()
     })
@@ -406,7 +404,6 @@ test('should accept finish/cleanup on INPUT stream even if there is a timeout an
   t.plan(8)
 
   let nbServerTry = 0
-  const nbDataChunkReceived = 0
   const server = http.createServer(function (req, res) {
     nbServerTry++
     res.statusCode = 200
@@ -455,7 +452,6 @@ test('should return an error and not retry if the INPUT stream is destroyed sinc
   t.plan(5)
 
   let nbServerTry = 0
-  const nbDataChunkReceived = 0
   const server = http.createServer(function (req, res) {
     nbServerTry++
     res.statusCode = 200
@@ -593,7 +589,6 @@ test('should return an error and not retry if the OUTPUT stream is destroyed sin
   t.plan(5)
 
   let nbServerTry = 0
-  const nbDataChunkReceived = 0
   const server = http.createServer(function (req, res) {
     nbServerTry++
     res.statusCode = 200
@@ -608,7 +603,7 @@ test('should return an error and not retry if the OUTPUT stream is destroyed sin
       body: 'yes',
       output: (opts, res) => {
         nbClientOutpoutStreamCreated++
-        outputChunks = []
+        const outputChunks = []
         const myWriteStream = new Writable({
           write (chunk, enc, wcb) {
             outputChunks.push(chunk.toString())

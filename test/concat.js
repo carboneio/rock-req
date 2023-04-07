@@ -2,7 +2,7 @@ const rock = require('../')
 const http = require('http')
 const str = require('string-to-stream')
 const test = require('tape')
-const { pipeline, Writable, Readable, finished, PassThrough } = require('stream')
+const { Writable } = require('stream')
 
 test('rock.concat (post, stream body, and json option)', function (t) {
   t.plan(4)
@@ -46,6 +46,7 @@ test('should return an error if the input stream is not created by a function', 
 
 test('should return an error if the output stream is not created by a function', function (t) {
   t.plan(2)
+  const chunks = []
   const opts = {
     url: 'http://localhost',
     output: new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } }),
