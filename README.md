@@ -7,10 +7,14 @@
 
 <p align="center">Ensure your HTTP requests always reach their destination!</p>
 
-[![javascript style guide][standard-image]][standard-url]
+[![npm][npm-image]][npm-url]  [![ci][ci-image]][ci-url]  [![javascript style guide][standard-image]][standard-url]
 
 [standard-image]: https://img.shields.io/badge/code_style-standard-brightgreen.svg
 [standard-url]: https://standardjs.com
+[npm-image]: https://img.shields.io/npm/v/rock-req.svg
+[npm-url]: https://npmjs.org/package/rock-req
+[ci-url]: https://github.com/carboneio/rock-req/actions
+[ci-image]: https://img.shields.io/github/actions/workflow/status/carboneio/rock-req/ci.yml?branch=master
 
 
 ## 🔥 Why should you need this?
