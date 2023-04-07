@@ -15,7 +15,7 @@
 
 ## 🔥 Why should you need this?
 
-In most libraries:
+In most existing libraries (2023):
 
 - Managing **reliable retries** is difficult, tricky with streams and not battle-tested
 - Using **multiple forward proxies** has several benefits like **higher availability** and **increased bandwidth** but 
