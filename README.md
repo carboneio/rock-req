@@ -16,7 +16,6 @@
 [ci-url]: https://github.com/carboneio/rock-req/actions
 [ci-image]: https://img.shields.io/github/actions/workflow/status/carboneio/rock-req/ci.yml?branch=master
 
-
 ## 🔥 Why should you need this?
 
 In most existing libraries (2023):
@@ -234,7 +233,7 @@ rock(opts, function (err, res) {})
 
 By default, rock-req retries with the following errors if `maxRetry > 1`.
 
-The callback is called when all the request succeed or all retries are done
+The callback is called when the request succeed or all retries are done
 
 ```js 
 const rock = require('rock-req');
@@ -320,7 +319,7 @@ Headers are merged. Then only the first level of the options object is merged (n
 Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
 
 `beforeRequest` is always called on each redirect/retry.
-  - on redirect, `opts.url` (and `hostname`, `port`, `protocol`, `path`) is updated to the new location
+  - on redirect, `opts.url` (and `hostname`, `port`, `protocol`, `path`) is updated to the new location. `opts.url` is null if it is a relative redirect.
   - on retry, `opts.url` (and `hostname`, `port`, `protocol`, `path`) have the same value as they did
     when the rock-req was initially called.
 
@@ -332,7 +331,7 @@ const myInstance = rock.extend({
     opts.protocol = 'http:';
     opts.hostname = '10.0.0.1';
     opts.port = 80;
-    opts.path = `${encodeURIComponent(hostname)}/${port}${path}`;
+    opts.path = `${hostname}/${port}${path}`;
     return opts;
   },
   headers: {

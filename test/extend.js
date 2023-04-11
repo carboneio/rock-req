@@ -229,3 +229,54 @@ test('beforeRequest handler, combined with redirect with relative URL', function
     })
   })
 })
+
+test('beforeRequest handler, combined with redirect with relative URL and rewritten URL', function (t) {
+  t.plan(5 + 4 + 3)
+
+  let httpPort = null
+
+  const httpServer = http.createServer(function (req, res) {
+    if (req.url === '/path1') {
+      t.equal(req.url, '/path1')
+      res.setHeader('Location', '/path2')
+      res.statusCode = 301
+      return res.end()
+    }
+    t.equal(req.url, '/path2')
+    res.statusCode = 200
+    res.end('response')
+  })
+
+  // create new instance
+  const newInstance = rock.extend({
+    maxRedirects: 5,
+    beforeRequest: (parsedOpts) => {
+      t.equal(parsedOpts.maxRedirects, 5)
+      if (parsedOpts.remainingRedirects === 5) {
+        t.equal(parsedOpts.hostname, 'example.com')
+        t.equal(parsedOpts.path, '/before')
+        t.equal(parsedOpts.protocol, 'http:')
+        parsedOpts.path = '/path1'
+      }
+      if (parsedOpts.remainingRedirects === 4) {
+        t.equal(parsedOpts.hostname, 'example.com')
+        t.equal(parsedOpts.path, '/path2')
+      }
+      parsedOpts.hostname = 'localhost'
+      return parsedOpts
+    }
+  })
+
+  httpServer.listen(0, function () {
+    httpPort = httpServer.address().port
+    newInstance({
+      url: 'http://example.com:' + httpPort + '/before',
+      rejectUnauthorized: false
+    }, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(data.toString(), 'response')
+      httpServer.close()
+    })
+  })
+})

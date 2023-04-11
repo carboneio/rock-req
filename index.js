@@ -36,9 +36,10 @@ function extend (defaultOptions = {}) {
 
     if (opts.url) {
       const { hostname, port, protocol, auth, path } = url.parse(opts.url) // eslint-disable-line node/no-deprecated-api
-      if (!hostname && !port && !protocol && !auth) opts.path = path // Relative redirect
+      if (!hostname && !port && !protocol && !auth) opts.path = path // Relative path with hostname set
       else Object.assign(opts, { hostname, port, protocol, auth, path }) // Absolute redirect
     }
+    const originalRequest = { hostname: opts.hostname, port: opts.port, protocol: opts.protocol, auth: opts.auth, path: opts.path }
     opts = opts.beforeRequest(opts)
 
     let body
@@ -58,7 +59,6 @@ function extend (defaultOptions = {}) {
     if (opts.json) opts.headers.accept = 'application/json'
     if (opts.method) opts.method = opts.method.toUpperCase()
 
-    const originalHost = opts.hostname // hostname before potential redirect
     const protocol = opts.protocol === 'https:' ? https : http // Support http/https urls
     const chunks = []
     let requestAbortedOrEnded = false
@@ -90,11 +90,14 @@ function extend (defaultOptions = {}) {
       if (opts.followRedirects !== false && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         requestAbortedOrEnded = true // discard all new events which could come after for this request to avoid calling the callback
         res.resume() // Discard response, consume data until the end to free up memory. Mandatory!
-        opts.url = res.headers.location // Follow 3xx redirects
         delete opts.headers.host // Discard `host` header on redirect (see #32)
-        const redirectHost = url.parse(opts.url).hostname // eslint-disable-line node/no-deprecated-api
-        // If redirected host is different than original host, drop headers to prevent cookie leak (#73)
-        if (redirectHost !== null && redirectHost !== originalHost) {
+        opts.url = res.headers.location
+        const redirectTo = url.parse(opts.url) // eslint-disable-line node/no-deprecated-api
+        if (redirectTo.hostname === null) { // relative redirect
+          opts.url = null
+          Object.assign(opts, originalRequest)
+          opts.path = redirectTo.path
+        } else if (redirectTo.hostname !== originalRequest.hostname) { // If redirected host is different than original host, drop headers to prevent cookie leak (#73)
           delete opts.headers.cookie
           delete opts.headers.authorization
         }
