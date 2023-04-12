@@ -39,7 +39,6 @@ It also supports many features:
 - Timeouts
 - HTTPS / HTTP
 - Composes well with npm packages for features like cookies, proxies, form data, & OAuth
-- Typescript definition
 - Keep 98% of the `simple-get` API (fork source)
 
 Like NodeJS pipeline, when the callback is called, the request is 100% finished, even with streams.

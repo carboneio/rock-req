@@ -1,5 +1,8 @@
 # Rock-req
 
+### 5.0.3
+  - fix README.md on npm.com
+
 ### 5.0.2
   - Catch all errors even if the package is used with nock for example
 
