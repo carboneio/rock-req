@@ -99,7 +99,7 @@ test('HEAD request', function (t) {
 })
 
 test('timeout option', function (t) {
-  t.plan(2)
+  t.plan(3)
 
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/path')
@@ -117,6 +117,7 @@ test('timeout option', function (t) {
       maxRetry: 0
     }, function (err, res) {
       t.ok(err instanceof Error)
+      t.equal(err.message, 'TimeoutError')
       server.close()
     })
   })

@@ -1,5 +1,8 @@
 # Rock-req
 
+### 5.0.2
+  - Catch all errors even if the package is used with nock for example
+
 ### 5.0.1
   - On relative redirect, `beforeRequest` handler receives updated `opts`
 

@@ -85,7 +85,6 @@ function extend (defaultOptions = {}) {
         res.resume() // Discard response, consume data until the end to free up memory. Mandatory!
         return setTimeout(rock, opts.retryDelay, opts, cb) // retry later
       }
-
       // or redirect and leave
       if (opts.followRedirects !== false && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         requestAbortedOrEnded = true // discard all new events which could come after for this request to avoid calling the callback
@@ -111,7 +110,6 @@ function extend (defaultOptions = {}) {
         }
         return rock(opts, cb)
       }
-
       // or read response and leave at the end
       response = res
       const contentEncoding = opts.method !== 'HEAD' ? (res.headers['content-encoding'] || '').toLowerCase() : ''
@@ -127,16 +125,18 @@ function extend (defaultOptions = {}) {
       }
     })
     req.once('timeout', () => {
+      // This timeout event can come after the input pipeline is finished (ex. timeout with no body)
       const _error = new Error('TimeoutError'); _error.code = 'ETIMEDOUT'
-      req.destroy() // we must destroy manually
-      onRequestEnd(_error) // This timeout event can come after the input pipeline is finished (ex. timeout with no body)
+      req.destroy(_error) // we must destroy manually and send the error to the error listener to call onRequestEnd
     })
-
+    req.once('error', (e) => {
+      onRequestEnd(e) // error can happen before pipeline is executed when some interceptor are used such as nock
+      req.destroy()
+    })
     const _inputStream = isFnStream(body) ? body(opts) : Readable.from([body], { objectMode: false })
     pipeline(_inputStream, req, (e) => {
       if (e) onRequestEnd(e)
     })
-
     return req
   }
 
@@ -153,6 +153,5 @@ function extend (defaultOptions = {}) {
   rock.concat = rock
   rock.defaults = _default
   rock.extend = extend
-
   return rock
 }
