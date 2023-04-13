@@ -485,7 +485,7 @@ test('should return an error and not retry if the INPUT stream is destroyed sinc
 })
 
 test('should destroy and restart a new OUTPUT stream on retry (error on input stream)', function (t) {
-  t.plan(19)
+  t.plan(20)
 
   let nbServerTry = 0
   let nbDataChunkReceived = 0
@@ -524,6 +524,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on input st
   })
   const newInstance = rock.extend({ maxRetry: 2 })
   const inputStreams = []
+  const outputStreams = []
   server.listen(0, function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
@@ -540,6 +541,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on input st
             wcb()
           }
         })
+        outputStreams.push(myWriteStream)
         return myWriteStream
       },
       body: (opts) => {
@@ -578,6 +580,115 @@ test('should destroy and restart a new OUTPUT stream on retry (error on input st
       t.equal(nbDataChunkReceived, 3)
       t.equal(inputStreams[0].destroyed, true)
       t.equal(inputStreams[1].destroyed, true)
+      t.equal(outputStreams[0].destroyed, true)
+      t.equal(res.statusCode, 200)
+      t.equal(outputChunks.join('').toString(), '123456789')
+      server.close()
+    })
+  })
+})
+
+test('should destroy and restart a new OUTPUT stream on retry (error on input stream, after a certain amount of time, output stream was started)', function (t) {
+  t.plan(22)
+
+  let nbServerTry = 0
+  let nbDataChunkReceived = 0
+  const dataToSend = Array(50).fill('abcde')
+  dataToSend.push(null)
+  const server = http.createServer(function (req, res) {
+    nbServerTry++
+    res.statusCode = 200
+    res.write('12345')
+    t.equal(req.url, '/')
+    const chunks = []
+    req.on('data', (chunk) => {
+      nbDataChunkReceived++
+      chunks.push(chunk.toString())
+      if (nbDataChunkReceived === 1) {
+        t.equal(chunk.toString(), 'abcde')
+      }
+      if (nbServerTry === 2 && nbDataChunkReceived === 26) {
+        t.equal(chunk.toString(), 'abcde')
+      }
+    })
+    req.on('error', (e) => {
+      t.ok(e instanceof Error)
+      t.equal(e.code, 'ECONNRESET')
+    })
+    req.on('end', () => {
+      if (nbServerTry === 2) {
+        t.equal(chunks.join(''), dataToSend.slice(0, -1).join(''))
+        t.equal(nbServerTry, 2)
+        setTimeout(function () {
+          res.end('6789')
+        }, 200)
+      }
+    })
+  })
+  const newInstance = rock.extend({ maxRetry: 2 })
+  const inputStreams = []
+  const outputStreams = []
+  server.listen(0, function () {
+    const port = server.address().port
+    let nbClientInputStreamCreated = 0
+    let nbClientOutputStreamCreated = 0
+    let outputChunks = []
+    const opts = {
+      url: 'http://localhost:' + port,
+      output: (opts, res) => {
+        outputChunks = []
+        nbClientOutputStreamCreated++
+        const myWriteStream = new Writable({
+          write (chunk, enc, wcb) {
+            outputChunks.push(chunk.toString())
+            wcb()
+          }
+        })
+        myWriteStream.on('error', (e) => {
+          t.ok(e instanceof Error)
+          t.equal(e.code, 'ECONNRESET')
+        })
+        outputStreams.push(myWriteStream)
+        return myWriteStream
+      },
+      body: (opts) => {
+        nbClientInputStreamCreated++
+        const myReadStream = new Readable({
+          construct (cb) {
+            this.data = dataToSend
+            this.it = 0
+            cb()
+          },
+          read (size) {
+            if (this.it === 25 && nbClientInputStreamCreated === 1) {
+              const _error = new Error('ECONNRESET')
+              _error.code = 'ECONNRESET'
+              myReadStream.destroy(_error)
+            }
+            setTimeout(() => {
+              this.push(this.data[this.it++])
+            }, 2)
+          }
+        })
+        myReadStream.on('error', (e) => {
+          t.ok(e instanceof Error)
+        })
+        inputStreams.push(myReadStream)
+        return myReadStream
+      },
+      method: 'POST',
+      maxRetry: 2
+    }
+    newInstance(opts, function (err, res, data) {
+      t.error(err)
+      t.equal(nbServerTry, 2)
+      t.equal(nbClientInputStreamCreated, 2)
+      t.equal(nbClientOutputStreamCreated, 2)
+      t.equal(nbDataChunkReceived, 50 + 25)
+      t.equal(inputStreams[0].destroyed, true)
+      t.equal(inputStreams[1].destroyed, true)
+      t.equal(outputStreams[0].destroyed, true)
+      t.equal(outputStreams[1].destroyed, true)
       t.equal(res.statusCode, 200)
       t.equal(outputChunks.join('').toString(), '123456789')
       server.close()
@@ -730,7 +841,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on output s
 })
 
 test('should destroy and restart a new OUTPUT stream on retry (error on server side)', function (t) {
-  t.plan(14)
+  t.plan(16)
 
   let nbServerTry = 0
   let nbDataChunkReceived = 0
@@ -760,6 +871,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
   })
   const newInstance = rock.extend({ maxRetry: 2 })
   const inputStreams = []
+  const outputStreams = []
   let nbClientOutputStreamCreated = 0
   let outputChunks = []
   server.listen(0, function () {
@@ -791,6 +903,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
             wcb()
           }
         })
+        outputStreams.push(myWriteStream)
         return myWriteStream
       },
       method: 'POST'
@@ -802,6 +915,8 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
       t.equal(nbClientOutputStreamCreated, 2)
       t.equal(inputStreams[0].destroyed, true)
       t.equal(inputStreams[1].destroyed, true)
+      t.equal(outputStreams[0].destroyed, true)
+      t.equal(outputStreams[1].destroyed, true)
       t.equal(nbDataChunkReceived, 4)
       t.equal(res.statusCode, 200)
       t.equal(outputChunks.join(''), '123456789')
@@ -894,6 +1009,95 @@ test('should accept using finished/cleanup function of NodeJS on OUTPUT stream o
       t.equal(nbClientInputStreamCreated, 2)
       t.equal(nbClientOutputStreamCreated, 2)
       t.equal(nbClientOutputFinishedStream, 2)
+      t.equal(inputStreams[0].destroyed, true)
+      t.equal(inputStreams[1].destroyed, true)
+      t.equal(nbDataChunkReceived, 4)
+      t.equal(res.statusCode, 200)
+      t.equal(outputChunks.join(''), '123456789')
+      server.close()
+    })
+  })
+})
+
+test('should accept to use stream.on(error) on Writable stream (error on server side)', function (t) {
+  t.plan(17)
+
+  let nbServerTry = 0
+  let nbDataChunkReceived = 0
+  const server = http.createServer(function (req, res) {
+    nbServerTry++
+    res.statusCode = 200
+    res.write('12345')
+    t.equal(req.url, '/')
+    const chunks = []
+    req.on('data', (chunk) => {
+      nbDataChunkReceived++
+      chunks.push(chunk.toString())
+      if (nbDataChunkReceived === 1) {
+        t.equal(chunk.toString(), 'abcde')
+        res.socket.destroy(new Error('ECONNRESET'))
+      }
+    })
+    req.on('end', () => {
+      if (nbServerTry === 2) {
+        t.equal(chunks.join(''), 'abcdefghij')
+        t.equal(nbServerTry, 2)
+        setTimeout(() => {
+          res.end('6789')
+        }, 200)
+      }
+    })
+  })
+  const newInstance = rock.extend({ maxRetry: 2 })
+  const inputStreams = []
+  let nbClientOutputStreamCreated = 0
+  let nbClientOutputErrorStream = 0
+  let outputChunks = []
+  server.listen(0, function () {
+    const port = server.address().port
+    let nbClientInputStreamCreated = 0
+    const opts = {
+      url: 'http://localhost:' + port,
+      body: (opts) => {
+        nbClientInputStreamCreated++
+        const myReadStream = new Readable({
+          construct (cb) {
+            this.data = ['abcde', 'fghij', null]
+            this.it = 0
+            cb()
+          },
+          read (size) {
+            this.push(this.data[this.it++])
+          }
+        })
+        inputStreams.push(myReadStream)
+        return myReadStream
+      },
+      output: (opts, res) => {
+        outputChunks = []
+        nbClientOutputStreamCreated++
+        const myWriteStream = new Writable({
+          write (chunk, enc, wcb) {
+            outputChunks.push(chunk.toString())
+            wcb()
+          }
+        })
+        myWriteStream.once('error', (err) => {
+          nbClientOutputErrorStream++
+          t.ok(err instanceof Error)
+          t.equal(err.code, 'ECONNRESET')
+        })
+        return myWriteStream
+      },
+      method: 'POST',
+      maxRetry: 2
+    }
+    newInstance(opts, function (err, res, data) {
+      t.error(err)
+      t.equal(nbServerTry, 2)
+      t.equal(nbClientInputStreamCreated, 2)
+      t.equal(nbClientOutputStreamCreated, 2)
+      t.equal(nbClientOutputErrorStream, 1)
       t.equal(inputStreams[0].destroyed, true)
       t.equal(inputStreams[1].destroyed, true)
       t.equal(nbDataChunkReceived, 4)

@@ -24,7 +24,7 @@ In most existing libraries (2023):
 - Using **multiple forward proxies** has several benefits like **higher availability** and **increased bandwidth** but 
   **Intercepting retries** to use another Egress controller between two requests is not possible.
 - Many request libraries are heavy: node-fetch, superagent, needle, got, axios, request
-- Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, ...)
+- Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, phin, ...)
 
 ⚡️ **Rock-req** solves these problems with only **160 lines of code** and **zero dependencies**
 
@@ -34,17 +34,17 @@ It also supports many features:
 - Handles gzip/deflate/brotli responses
 - Modify defaults
 - Extend and create new instances
-- Automatically destroy input/output stream on error (pipeline)
+- Automatically destroy input/output stream on error
+- Keep Alive by default (3000ms)
 - Composable
 - Timeouts
 - HTTPS / HTTP
 - Composes well with npm packages for features like cookies, proxies, form data, & OAuth
 - Keep 98% of the `simple-get` API (fork source)
 
-Like NodeJS pipeline, when the callback is called, the request is 100% finished, even with streams.
+When the callback is called, the request is 100% finished, even with streams.
 
 ## Install
-
 
 ```
   npm install rock-req
@@ -136,7 +136,7 @@ rock(opts, function (err, res, data) {} )
 **opts** can contain any value of NodeJS http.request with rock-req parameters. Here are the most used one:
 
   - `maxRedirects <number>`overwrite global maximum number of redirects. Defaults to 10
-  - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 0
+  - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 1
   - `followRedirects <boolean>` do not follow redirects
   - `body <buffer> | <string> | <object> | <function>` body to post
   - `json <boolean>` automatically stringify/parse request/response Default : false
@@ -162,7 +162,8 @@ rock(opts, function (err, res, data) {} )
 Rock-req requires that input stream is initialized in a function.
 
 This function is invoked by rock-req for every request retry.
-If something goes wrong, the old stream is destroyed.
+
+If something goes wrong, the Readable stream is destroyed automatically and the error can be captured with `'error'` event or `stream.finished` (optional).
 
 ```js
 const rock = require('rock-req')
@@ -191,33 +192,22 @@ Alternative syntax:
 ### Output Stream
 
 Rock-req requires that output stream is initialized in a function.
+
 This function is invoked by rock-req for every request retry.
+
+If something goes wrong, the Writable stream is destroyed automatically and the error can be captured with `'error'` event or `stream.finished` (optional).
 
 ```js
 const rock = require('rock-req')
 const fs = require('fs')
-const { finished } = require('stream')
 
 // opts contains options passed in rock(opts). DO NOT MODIFY IT
 // res  if the http response (res.statusCode, ...). DO NOT MODIFY IT and DO NOT CONSUME THE RES STREAM YOURSELF
 function createOutputStream(opts, res) {
 
   const writer = fs.createWriteStream('test_gfg.txt') 
-  // Internally, rock-req uses pipeline. If something goes wrong, the stream is destroyed automatically.
   // If you need to do some action (removing temporary files, ...), uses this native NodeJS method:
-  const cleanup = finished(writer, (err) => {
-    if (err) {
-      // clean up things 
-    } 
-    // When using the finished() method in NodeJS, it's important to be aware that it can leave some event listeners 
-    // (specifically, the 'error', 'end', 'finish', and 'close' events) hanging around even after this callback function has been called.
-    // This is intentional, as it helps prevent unexpected crashes if an error occurs due to incorrect stream implementations.
-    // However, if you don't want these event listeners to stick around after the callback function has been called,
-    // you can use the cleanup function that's returned by stream.finished() to remove them. 
-    // You'll need to explicitly call this cleanup function within your callback function to ensure that the event listeners get removed properly.
-    cleanup();
-  });
-  // It must return a Writable stream. Otherwise, the request is cancel with an error
+  writer.on('error', (e) => { /* clean up your stuff */ })
   return writer
 }
 
@@ -230,7 +220,7 @@ rock(opts, function (err, res) {})
 
 ### Retry on failure
 
-By default, rock-req retries with the following errors if `maxRetry > 1`.
+By default, rock-req retries with the following errors if `maxRetry > 0`.
 
 The callback is called when the request succeed or all retries are done
 
@@ -263,24 +253,24 @@ rock.defaults.retryOnError = [
 const opts = {
   url      : 'http://example.com',
   body     : 'this is the POST body',
-  maxRetry : 2 // 0 is the default value (= no retries)
+  maxRetry : 1
 }
 rock(opts, function (err, res, data) {} );
 ```
 
 
-### Global options
+### Global options & Extend
 
 Change default parameters globally (not recommended), or create a new instance with specific paramaters (see below)
 
 ```js
 rock.defaults = {
-  headers       : { 'accept-encoding': 'gzip, deflate, br' },
-  maxRedirects  : 10,
-  maxRetry      : 0,
-  retryDelay    : 100, //ms
-  retryOnCode   : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
-  retryOnError  : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
+  headers           : { 'accept-encoding': 'gzip, deflate, br' },
+  maxRedirects      : 10,
+  maxRetry          : 1,
+  retryDelay        : 10, //ms
+  retryOnCode       : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
+  retryOnError      : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
   // beforeRequest is called for each request, retry and redirect
   beforeRequest : (opts) => {
     // There options can be overwritted (= parsed opts.url)
@@ -294,6 +284,7 @@ rock.defaults = {
     opts.method = 'POST';
     opts.remainingRetry; 
     opts.remainingRedirects;
+    opts.agent = otherHttpAgent;
     
     // READ-ONLY options (not exhaustive)
     opts.url; // DOT NOT OVERWRITE
@@ -308,19 +299,37 @@ rock.defaults = {
 }
 ```
 
-### Extend and intercept retries
-
-Create a new instance with specific parameter instead of modifying `rock.defaults`
+Create a new instance with specific parameters instead of modifying global `rock.defaults`.
 
 By default, this new instance inherits values of the instance source if options are not overwritten. 
 Headers are merged. Then only the first level of the options object is merged (no deep travelling in sub-objects or arrays).
 
-Here is a basic example of `beforeRequest` interceptor to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
+The `keepAliveDuration` can be changed only with `extend` method because `rock-req` creates new http Agent on new instances.
 
-`beforeRequest` is always called on each redirect/retry.
+```js
+const myInstance = rock.extend({
+  keepAliveDuration : 0, // Change keep alive duration. Default to 3000ms. Set 0 to deactivate keep alive.
+  headers: {
+    'Custom-header': 'x-for-proxy'
+  },
+  timeout : 1000
+});
+
+myInstance.get('http://example.com', function (err, res, data) {})
+```
+
+### Intercept retries for Higher Availability / Higher bandwidth 
+
+`beforeRequest` is always called on each request, each redirect and each retry.
   - on redirect, `opts.url` (and `hostname`, `port`, `protocol`, `path`) is updated to the new location. `opts.url` is null if it is a relative redirect.
   - on retry, `opts.url` (and `hostname`, `port`, `protocol`, `path`) have the same value as they did
     when the rock-req was initially called.
+
+For example, you can dynamically change the http Agent to use a another proxy on each request.
+Be careful, in this case, you must provide the right http/https Agent if there is a redirection from http to https.
+Otherwise, rock-req automatically replaces your Agent with the correct one if the protocol changes after redirection.
+
+Or, you can rewrite the URL if you want to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
 
 
 ```js
@@ -332,17 +341,12 @@ const myInstance = rock.extend({
     opts.port = 80;
     opts.path = `${hostname}/${port}${path}`;
     return opts;
-  },
-  headers: {
-    'Custom-header': 'x-for-proxy'
-  },
-  timeout : 1000
+  }
 });
 
 myInstance.get('http://example.com', function (err, res, data) {})
 
 ```
-
 
 
 ### Timeout
@@ -557,12 +561,16 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
   - after `body = () => { const myStream = create(); return myStream; }` 
 
 
-## Notes:
+## TODO:
 
 - [ ] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
-- [ ] agent keep Alive
 - [ ] add advanced timeout (response timeout)
 - [ ] test prevError
+- [ ] test HTTP abort signal option
+- [ ] test input stream error with 502 error retry. Does stream.resume destroy  all streams?
+- [ ] promisify
+- [ ] typescript type
+- [ ] NodesJS 19 doesn't need agent.timeout to leave https://github.com/nodejs/node/issues/47228  https://github.com/nodejs/node/issues/2642
 
 
 # Supporters

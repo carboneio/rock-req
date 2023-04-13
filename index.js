@@ -1,5 +1,3 @@
-module.exports = extend()
-
 const http = require('http')
 const https = require('https')
 const querystring = require('querystring')
@@ -17,15 +15,16 @@ function extend (defaultOptions = {}) {
     headers: { 'accept-encoding': 'gzip, deflate, br' },
     maxRedirects: 10,
     maxRetry: 0,
-    retryDelay: 100, // ms
+    retryDelay: 10, // ms
+    keepAliveDuration: 3000, // ms
     retryOnCode: [408, 429, 500, 502, 503, 504, 521, 522, 524],
     retryOnError: ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED', 'EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN'],
     beforeRequest: o => o
   }
   defaultOptions.headers = applyDefault(cloneLowerCase(defaultOptions.headers), _default.headers)
   _default = applyDefault(defaultOptions, _default) // inherits of parent options
+  const agents = [http, https].map( h => (_default.keepAliveDuration > 0 ) ? new h.Agent({ keepAlive: true, keepAliveMsecs: _default.keepAliveDuration, timeout : _default.keepAliveDuration /* remove free socket node < 19 */  }) : undefined);
 
-  // all options https://nodejs.org/dist/latest-v18.x/docs/api/http.html#http_http_request_url_options_callback
   function rock (opts, directBody, cb) {
     if (typeof opts === 'string') opts = { url: opts }
     if (!cb) { cb = directBody } else { opts.body = directBody }
@@ -58,24 +57,38 @@ function extend (defaultOptions = {}) {
     if (opts.output && (isStream(opts.output) || !isFnStream(opts.output))) return cb(new Error('opts.output must be a function returning a Writable stream. RTFM'))
     if (opts.json) opts.headers.accept = 'application/json'
     if (opts.method) opts.method = opts.method.toUpperCase()
+    if (!opts.agent || opts.agent.protocol !== opts.protocol) opts.agent = (opts.protocol === 'https:' ? agents[1] : agents[0]);
 
     const protocol = opts.protocol === 'https:' ? https : http // Support http/https urls
     const chunks = []
+    const streamToCleanOnError = []
     let requestAbortedOrEnded = false
     let response = null
     function onRequestEnd (err) {
       if (requestAbortedOrEnded === true) return
       requestAbortedOrEnded = true
-      if (opts.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
-        opts.prevError = err
-        return setTimeout(rock, opts.retryDelay, opts, cb) // retry in 100ms
+      if (err) {
+        streamToCleanOnError.forEach( s => s.destroy(err) )
+        if (opts.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
+          opts.prevError = err
+          return setTimeout(rock, opts.retryDelay, opts, cb) // retry in 100ms
+        }
+        return cb(err)
       }
-      if (err) return cb(err)
       let data = Buffer.concat(chunks)
       if (opts.json) {
         try { data = JSON.parse(data.toString()) } catch (e) { return cb(e, response, data) }
       }
       cb(null, response, data)
+    }
+    function listen (stream, isLast = false) {
+      streamToCleanOnError.push(stream)
+      stream.once('error', onRequestEnd)
+      stream.once('close', () => {
+        if (stream.readableEnded === false || stream.writableEnded === false) return onRequestEnd(new Error('ERR_STREAM_PREMATURE_CLOSE')) 
+        if (isLast === true) return onRequestEnd()
+      })
+      return stream
     }
     const req = protocol.request(opts, res => {
       opts.prevStatusCode = res.statusCode
@@ -116,27 +129,22 @@ function extend (defaultOptions = {}) {
       const output = opts.output ? opts.output(opts, res) : new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } })
       switch (contentEncoding) {
         case 'br':
-          pipeline(res, zlib.createBrotliDecompress(), output, onRequestEnd); break
+          listen(res).pipe(listen(zlib.createBrotliDecompress())).pipe(listen(output, true)); break
         case 'gzip':
         case 'deflate':
-          pipeline(res, zlib.createUnzip(), output, onRequestEnd); break
+          listen(res).pipe(listen(zlib.createUnzip())).pipe(listen(output, true)); break
         default:
-          pipeline(res, output, onRequestEnd); break
+          listen(res).pipe(listen(output, true)); break
       }
     })
     req.once('timeout', () => {
-      // This timeout event can come after the input pipeline is finished (ex. timeout with no body)
       const _error = new Error('TimeoutError'); _error.code = 'ETIMEDOUT'
       req.destroy(_error) // we must destroy manually and send the error to the error listener to call onRequestEnd
     })
-    req.once('error', (e) => {
-      onRequestEnd(e) // error can happen before pipeline is executed when some interceptor are used such as nock
-      req.destroy()
-    })
-    const _inputStream = isFnStream(body) ? body(opts) : Readable.from([body], { objectMode: false })
-    pipeline(_inputStream, req, (e) => {
-      if (e) onRequestEnd(e)
-    })
+
+    if (isFnStream(body) === true) listen(body(opts)).pipe(listen(req))
+    else listen(req).end(body)
+
     return req
   }
 
@@ -155,3 +163,5 @@ function extend (defaultOptions = {}) {
   rock.extend = extend
   return rock
 }
+
+module.exports = extend()

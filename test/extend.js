@@ -123,7 +123,7 @@ test('beforeRequest handler, combined with retries', function (t) {
   })
 })
 
-test('beforeRequest handler, combined with redirect with absolute URL', function (t) {
+test('beforeRequest handler, combined with redirect with absolute URL, and switch from http to https', function (t) {
   t.plan(5 + 2 * 4)
 
   let httpsPort = null

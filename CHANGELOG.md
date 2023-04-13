@@ -1,5 +1,9 @@
 # Rock-req
 
+### 5.1.0
+  - Add benchmark and replace NodeJS `pipeline` by traditional `pipe` (x2 faster)
+  - Add default keep alive
+
 ### 5.0.3
   - fix README.md on npm.com
 
