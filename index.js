@@ -3,7 +3,7 @@ const https = require('https')
 const querystring = require('querystring')
 const url = require('url')
 const zlib = require('zlib')
-const { pipeline, Writable, Readable } = require('stream')
+const { Writable } = require('stream')
 
 const isStream = o => o !== null && typeof o === 'object' && typeof o.pipe === 'function'
 const isFnStream = o => o instanceof Function
@@ -23,7 +23,7 @@ function extend (defaultOptions = {}) {
   }
   defaultOptions.headers = applyDefault(cloneLowerCase(defaultOptions.headers), _default.headers)
   _default = applyDefault(defaultOptions, _default) // inherits of parent options
-  const agents = [http, https].map( h => (_default.keepAliveDuration > 0 ) ? new h.Agent({ keepAlive: true, keepAliveMsecs: _default.keepAliveDuration, timeout : _default.keepAliveDuration /* remove free socket node < 19 */  }) : undefined);
+  const agents = [http, https].map(h => (_default.keepAliveDuration > 0) ? new h.Agent({ keepAlive: true, keepAliveMsecs: _default.keepAliveDuration, timeout: _default.keepAliveDuration /* remove free socket node < 19 */ }) : undefined)
 
   function rock (opts, directBody, cb) {
     if (typeof opts === 'string') opts = { url: opts }
@@ -57,7 +57,7 @@ function extend (defaultOptions = {}) {
     if (opts.output && (isStream(opts.output) || !isFnStream(opts.output))) return cb(new Error('opts.output must be a function returning a Writable stream. RTFM'))
     if (opts.json) opts.headers.accept = 'application/json'
     if (opts.method) opts.method = opts.method.toUpperCase()
-    if (!opts.agent || opts.agent.protocol !== opts.protocol) opts.agent = (opts.protocol === 'https:' ? agents[1] : agents[0]);
+    if (!opts.agent || opts.agent.protocol !== opts.protocol) opts.agent = (opts.protocol === 'https:' ? agents[1] : agents[0])
 
     const protocol = opts.protocol === 'https:' ? https : http // Support http/https urls
     const chunks = []
@@ -68,7 +68,7 @@ function extend (defaultOptions = {}) {
       if (requestAbortedOrEnded === true) return
       requestAbortedOrEnded = true
       if (err) {
-        streamToCleanOnError.forEach( s => s.destroy(err) )
+        streamToCleanOnError.forEach(s => s.destroy(err))
         if (opts.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
           opts.prevError = err
           return setTimeout(rock, opts.retryDelay, opts, cb) // retry in 100ms
@@ -85,7 +85,7 @@ function extend (defaultOptions = {}) {
       streamToCleanOnError.push(stream)
       stream.once('error', onRequestEnd)
       stream.once('close', () => {
-        if (stream.readableEnded === false || stream.writableEnded === false) return onRequestEnd(new Error('ERR_STREAM_PREMATURE_CLOSE')) 
+        if (stream.readableEnded === false || stream.writableEnded === false) return onRequestEnd(new Error('ERR_STREAM_PREMATURE_CLOSE'))
         if (isLast === true) return onRequestEnd()
       })
       return stream
