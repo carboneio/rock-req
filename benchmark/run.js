@@ -26,6 +26,26 @@ suite.on('start', function () {
   console.log(`Started. URL tested: ${URL}`);
 });
 
+suite.add('got | GET |', {
+  defer: true,
+  fn(defer) {
+    got
+      .get(URL, { throwHttpErrors: false, retry: 0 })
+      .then(() => defer.resolve())
+      .catch(() => defer.resolve());
+  }
+});
+
+suite.add('got | POST |', {
+  defer: true,
+  fn(defer) {
+    got
+      .post(URL, { throwHttpErrors: false })
+      .then(() => defer.resolve())
+      .catch(() => defer.resolve());
+  }
+});
+
 suite.add('rock-req | GET |', {
   defer: true,
   fn(defer) {
@@ -44,7 +64,7 @@ suite.add('rock-req | POST |', {
   }
 });
 
-/*suite.add('http.request (low-level) | GET |', {
+suite.add('http.request (low-level) | GET |', {
   defer: true,
   fn(defer) {
     http
@@ -70,7 +90,7 @@ suite.add('http.request (low-level) | POST |', {
     req.on('error',  (e) => {})
     req.end();
   }
-});*/
+});
 
 suite.add('undici (low-level) | GET |', {
   defer: true,

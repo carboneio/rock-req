@@ -3,6 +3,8 @@
 ### 5.1.0
   - Add benchmark and replace NodeJS `pipeline` by traditional `pipe` (x2 faster)
   - Add default keep alive
+  - One retry by default
+  - Remove retry on error 500 by default
 
 ### 5.0.3
   - fix README.md on npm.com

@@ -5,7 +5,7 @@
 
 <h1 align="center" style="border-bottom:none; font-size: 2.2em;">Rock-req.js</h1>
 
-<p align="center">Ensure your HTTP requests always reach their destination!</p>
+<p align="center">⭐️⭐️ Ensure your HTTP requests always reach their destination as <b>efficiently</b> as possible! ⭐️⭐️</p>
 
 [![npm][npm-image]][npm-url]  [![ci][ci-image]][ci-url]  [![javascript style guide][standard-image]][standard-url]
 
@@ -16,7 +16,7 @@
 [ci-url]: https://github.com/carboneio/rock-req/actions
 [ci-image]: https://img.shields.io/github/actions/workflow/status/carboneio/rock-req/ci.yml?branch=master
 
-## 🔥 Why should you need this?
+## 🔥 Why?
 
 In most existing libraries (2023):
 
@@ -26,15 +26,18 @@ In most existing libraries (2023):
 - Many request libraries are heavy: node-fetch, superagent, needle, got, axios, request
 - Lightweight alternatives are not as light as they claim due to dependencies (simple-get, tiny-req, puny-req, phin, ...)
 
-⚡️ **Rock-req** solves these problems with only **160 lines of code** and **zero dependencies**
+⚡️ **Rock-req** solves these problems with only **150 lines of code** and **zero dependencies**
 
 It also supports many features:
 
 - Follows redirects
-- Handles gzip/deflate/brotli responses
+- Handles **gzip/deflate/brotli** responses
 - Modify defaults
 - Extend and create new instances
-- Automatically destroy input/output stream on error
+- Automatically destroy input/output **stream** on error and premature close event
+- **Advanced retries**
+- URL Rewrite
+- **Ultra-fast (> 20k req/s)**
 - Keep Alive by default (3000ms)
 - Composable
 - Timeouts
@@ -43,6 +46,32 @@ It also supports many features:
 - Keep 98% of the `simple-get` API (fork source)
 
 When the callback is called, the request is 100% finished, even with streams.
+
+
+## 🚀 Benchmark Rock-req vs got, axios, node-fetch, phin, simple-get, superagent, ...
+
+Stop using "slow by-default" and "false-light" HTTP request libraries!
+
+
+| Library      | Speed            | Size deps inc. |
+| ------------ |-----------------:| --------------:|
+| rock-req 🙋‍♂️  | 21797 req/s      | 144 LOC        |
+| simple-get   | 3260 req/s       |   317 LOC      |
+| axios        | 4910 req/s       | 13983 LOC      |
+| got          | 1762 req/s       |  9227 LOC      |
+| fetch        | 2102 req/s       | 13334 LOC      |
+| request      | 1869 req/s       | 46572 LOC      |
+| superagent   | 2100 req/s       | 16109 LOC      |
+| phin         | 1164 req/s       |   331 LOC      |
+| undici*      | 24378 req/s      | 16225 LOC      |
+
+
+> `undici` is a low-level API, faster alternative to the native NodeJS http module. It is the glass ceiling limit for NodeJS.
+
+> `rock-req` uses only the native NodeJS http module and provides many high-level features, a lot more than `phin` and `simple-get` with fewer lines
+
+> Tested with NodeJS 18.x LTS on Macbook Pro M1 Max
+
 
 ## Install
 
@@ -231,7 +260,6 @@ const rock = require('rock-req');
 rock.defaults.retryOnCode = [
   408, /* Request Timeout */
   429, /* Too Many Requests */
-  500, /* Internal Server Error */
   502, /* Bad Gateway */
   503, /* Service Unavailable */
   504, /* Gateway Timeout*/
@@ -269,7 +297,7 @@ rock.defaults = {
   maxRedirects      : 10,
   maxRetry          : 1,
   retryDelay        : 10, //ms
-  retryOnCode       : [408, 429, 500, 502, 503, 504, 521, 522, 524 ],
+  retryOnCode       : [408, 429, 502, 503, 504, 521, 522, 524 ],
   retryOnError      : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
   // beforeRequest is called for each request, retry and redirect
   beforeRequest : (opts) => {
@@ -570,7 +598,7 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
 - [ ] test input stream error with 502 error retry. Does stream.resume destroy  all streams?
 - [ ] promisify
 - [ ] typescript type
-- [ ] NodesJS 19 doesn't need agent.timeout to leave https://github.com/nodejs/node/issues/47228  https://github.com/nodejs/node/issues/2642
+- [ ] NodesJS 19 doesn't need agent.timeout to exit https://github.com/nodejs/node/issues/47228  https://github.com/nodejs/node/issues/2642
 
 
 # Supporters

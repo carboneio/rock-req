@@ -16,10 +16,9 @@ test('should retry if there is socket errors', function (t) {
 })
 
 test('should retry if there are some HTTP code errors', function (t) {
-  t.plan(4 * 10 /* 9 + 1 success */ + 9 /* second try which is a success */)
+  t.plan(4 * 9 /* 8 + 1 success */ + 8 /* second try which is a success */)
   testRetryOnHttpCode(t, 408, 1)
   testRetryOnHttpCode(t, 429, 1)
-  testRetryOnHttpCode(t, 500, 1)
   testRetryOnHttpCode(t, 502, 1)
   testRetryOnHttpCode(t, 503, 1)
   testRetryOnHttpCode(t, 504, 1)
@@ -34,7 +33,7 @@ test('should not retry if maxRetry === 0', function (t) {
   t.plan(4)
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/path')
-    res.statusCode = 500
+    res.statusCode = 502
     res.end('response')
   })
   server.listen(0, function () {
@@ -42,10 +41,10 @@ test('should not retry if maxRetry === 0', function (t) {
     rock({
       url: 'http://localhost:' + port + '/path',
       maxRetry: 0,
-      retryOnCode: [500]
+      retryOnCode: [502]
     }, function (err, res, data) {
       t.error(err)
-      t.equal(res.statusCode, 500)
+      t.equal(res.statusCode, 502)
       t.equal(data.toString(), 'response')
       server.close()
     })
@@ -56,7 +55,7 @@ test('should not retry if maxRetry < 0', function (t) {
   t.plan(4)
   const server = http.createServer(function (req, res) {
     t.equal(req.url, '/path')
-    res.statusCode = 500
+    res.statusCode = 502
     res.end('response')
   })
   server.listen(0, function () {
@@ -64,10 +63,10 @@ test('should not retry if maxRetry < 0', function (t) {
     rock({
       url: 'http://localhost:' + port + '/path',
       maxRetry: -1,
-      retryOnCode: [500]
+      retryOnCode: [502]
     }, function (err, res, data) {
       t.error(err)
-      t.equal(res.statusCode, 500)
+      t.equal(res.statusCode, 502)
       t.equal(data.toString(), 'response')
       server.close()
     })

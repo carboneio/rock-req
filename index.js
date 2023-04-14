@@ -14,10 +14,10 @@ function extend (defaultOptions = {}) {
   let _default = {
     headers: { 'accept-encoding': 'gzip, deflate, br' },
     maxRedirects: 10,
-    maxRetry: 0,
+    maxRetry: 1,
     retryDelay: 10, // ms
     keepAliveDuration: 3000, // ms
-    retryOnCode: [408, 429, 500, 502, 503, 504, 521, 522, 524],
+    retryOnCode: [408, 429, 502, 503, 504, 521, 522, 524],
     retryOnError: ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED', 'EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN'],
     beforeRequest: o => o
   }
