@@ -153,6 +153,35 @@ test('post (json body)', function (t) {
   })
 })
 
+test('post with empty JSON response should not crash', function (t) {
+  t.plan(5)
+
+  const server = http.createServer(function (req, res) {
+    t.equal(req.method, 'POST')
+    t.equal(req.headers['content-type'], 'application/json')
+    res.statusCode = 204
+    res.end();
+  })
+
+  server.listen(0, function () {
+    const port = server.address().port
+    const opts = {
+      method: 'POST',
+      url: 'http://localhost:' + port,
+      body: {
+        message: 'this is the body'
+      },
+      json: true
+    }
+    rock.concat(opts, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 204)
+      t.equal(data, null)
+      server.close()
+    })
+  })
+})
+
 test('should accept postJSON as a shortcut', function (t) {
   t.plan(5)
 

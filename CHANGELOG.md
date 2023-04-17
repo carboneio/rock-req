@@ -1,5 +1,8 @@
 # Rock-req
 
+### 5.1.1
+  - Accept empty response in JSON mode. Returned `data` is `null` in this case.
+
 ### 5.1.0
   - Add benchmark and replace NodeJS `pipeline` by traditional `pipe` (x2 faster)
   - Add default keep alive

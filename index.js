@@ -77,7 +77,7 @@ function extend (defaultOptions = {}) {
       }
       let data = Buffer.concat(chunks)
       if (opts.json) {
-        try { data = JSON.parse(data.toString()) } catch (e) { return cb(e, response, data) }
+        try { data = data.length > 0 ? JSON.parse(data.toString()) : null } catch (e) { return cb(e, response, data) }
       }
       cb(null, response, data)
     }
