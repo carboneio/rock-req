@@ -1,9 +1,9 @@
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/rock-req-logo.svg" alt="rock-req logo" height="120"/>
+  <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/rock-req-logo.svg" alt="rock-req logo" height="150"/>
 </p>
 
-<h1 align="center" style="border-bottom:none; font-size: 2.2em;">Rock-req.js</h1>
+<h1 align="center" style="border-bottom:none;">Rock-req</h1>
 
 <p align="center">⭐️⭐️ Ensure your HTTP requests always reach their destination as <b>efficiently</b> as possible! ⭐️⭐️</p>
 <p align="center">Tested on Mac, Linux, Windows with NodeJS 16, 18, 19</p>
