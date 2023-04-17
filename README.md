@@ -6,6 +6,7 @@
 <h1 align="center" style="border-bottom:none; font-size: 2.2em;">Rock-req.js</h1>
 
 <p align="center">⭐️⭐️ Ensure your HTTP requests always reach their destination as <b>efficiently</b> as possible! ⭐️⭐️</p>
+<p align="center">Tested on Mac, Linux, Windows with NodeJS 16, 18, 19</p>
 
 [![npm][npm-image]][npm-url]  [![ci][ci-image]][ci-url]  [![javascript style guide][standard-image]][standard-url]
 
@@ -68,7 +69,7 @@ Stop using "slow by-default" and "false-light" HTTP request libraries!
 
 > `undici` is a low-level API, faster alternative to the native NodeJS http module. It is the glass ceiling limit for NodeJS.
 
-> `rock-req` uses only the native NodeJS http module and provides many high-level features, a lot more than `phin` and `simple-get` with fewer lines
+> `rock-req` uses only the native NodeJS http module and provides many high-level features, a lot more than `phin` and `simple-get` with fewer lines of code.
 
 > Tested with NodeJS 18.x LTS on Macbook Pro M1 Max
 
