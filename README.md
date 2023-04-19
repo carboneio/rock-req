@@ -6,7 +6,7 @@
 <h1 align="center" style="border-bottom:none;">Rock-req</h1>
 
 <p align="center">⭐️⭐️ Ensure your HTTP requests always reach their destination as <b>efficiently</b> as possible! ⭐️⭐️</p>
-<p align="center">Tested on Mac, Linux, Windows with NodeJS 16, 18, 19</p>
+<p align="center">Tested on Mac, Linux, Windows with NodeJS 16, 18, 19, 20</p>
 
 [![npm][npm-image]][npm-url]  [![ci][ci-image]][ci-url]  [![javascript style guide][standard-image]][standard-url]
 
