@@ -26,6 +26,24 @@ suite.on('start', function () {
   console.log(`Started. URL tested: ${URL}`)
 })
 
+suite.add('rock-req | GET |', {
+  defer: true,
+  fn (defer) {
+    rock({ path: PATH, host: HOST, port: PORT }, () => {
+      defer.resolve()
+    })
+  }
+})
+
+suite.add('rock-req | POST |', {
+  defer: true,
+  fn (defer) {
+    rock({ host: HOST, port: PORT, path: PATH, body: '', method: 'POST' }, () => {
+      defer.resolve()
+    })
+  }
+})
+
 suite.add('got | GET |', {
   defer: true,
   fn (defer) {
@@ -43,24 +61,6 @@ suite.add('got | POST |', {
       .post(URL, { throwHttpErrors: false })
       .then(() => defer.resolve())
       .catch(() => defer.resolve())
-  }
-})
-
-suite.add('rock-req | GET |', {
-  defer: true,
-  fn (defer) {
-    rock({ path: PATH, host: HOST, port: PORT }, () => {
-      defer.resolve()
-    })
-  }
-})
-
-suite.add('rock-req | POST |', {
-  defer: true,
-  fn (defer) {
-    rock({ host: HOST, port: PORT, path: PATH, body: '', method: 'POST' }, () => {
-      defer.resolve()
-    })
   }
 })
 

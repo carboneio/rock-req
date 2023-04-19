@@ -54,24 +54,26 @@ When the callback is called, the request is 100% finished, even with streams.
 Stop using "slow by-default" and "false-light" HTTP request libraries!
 
 
-| Library      | Speed            | Size deps inc. |
-| ------------ |-----------------:| --------------:|
-| rock-req 🙋‍♂️  | 21797 req/s      | 144 LOC        |
-| simple-get   | 3260 req/s       |   317 LOC      |
-| axios        | 4910 req/s       | 13983 LOC      |
-| got          | 1762 req/s       |  9227 LOC      |
-| fetch        | 2102 req/s       | 13334 LOC      |
-| request      | 1869 req/s       | 46572 LOC      |
-| superagent   | 2100 req/s       | 16109 LOC      |
-| phin         | 1164 req/s       |   331 LOC      |
-| undici*      | 24378 req/s      | 16225 LOC      |
+| Library      | NodeJS 16     | NodeJS 18     | NodeJS 20*     | Size deps inc. |
+| ------------ |--------------:|--------------:| --------------:| --------------:|
+| rock-req 🙋‍♂️  | 22816 req/s   | 21797 req/s   |  21964 req/s   |  144 LOC       |
+| simple-get   |  2937 req/s   |  3260 req/s   |  21258 req/s   |   317 LOC      |
+| axios        |  5090 req/s   |  4910 req/s   |   3196 req/s   | 13983 LOC      |
+| got          |  2163 req/s   |  1762 req/s   |   9961 req/s   |  9227 LOC      |
+| fetch        |  2101 req/s   |  2102 req/s   |   2020 req/s   | 13334 LOC      |
+| request      |  2249 req/s   |  1869 req/s   |  15815 req/s   | 46572 LOC      |
+| superagent   |  2776 req/s   |  2100 req/s   |   2895 req/s   | 16109 LOC      |
+| phin         |  3178 req/s   |  1164 req/s   |  21299 req/s   |   331 LOC      |
+| _undici_*    | 24095 req/s   | 24378 req/s   |  24191 req/s   | 16225 LOC      |
 
+
+> NodeJS 20 activates HTTP keep-alive by default, like `rock-req`
 
 > `undici` is a low-level API, faster alternative to the native NodeJS http module. It is the glass ceiling limit for NodeJS.
 
 > `rock-req` uses only the native NodeJS http module and provides many high-level features, a lot more than `phin` and `simple-get` with fewer lines of code.
 
-> Tested with NodeJS 18.x LTS on Macbook Pro M1 Max
+> Tested on Macbook Pro M1 Max
 
 
 ## Install
