@@ -595,14 +595,8 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
 ## TODO:
 
 - [ ] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
-- [ ] add advanced timeout (response timeout)
-- [ ] test prevError
-- [ ] test HTTP abort signal option
-- [ ] test input stream error with 502 error retry. Does stream.resume destroy  all streams?
-- [ ] promisify
-- [ ] typescript type
-- [ ] NodesJS 19 doesn't need agent.timeout to exit https://github.com/nodejs/node/issues/47228  https://github.com/nodejs/node/issues/2642
-
+- [ ] promisify ?
+- [ ] typescript type ?
 
 # Supporters
 
