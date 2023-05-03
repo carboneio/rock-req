@@ -1,5 +1,8 @@
 # Rock-req
 
+### 5.1.2
+  - Fix retry even if the socket is closed immediately on server side (socket hang up)
+
 ### 5.1.1
   - Accept empty response in JSON mode. Returned `data` is `null` in this case.
 

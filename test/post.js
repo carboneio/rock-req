@@ -160,7 +160,7 @@ test('post with empty JSON response should not crash', function (t) {
     t.equal(req.method, 'POST')
     t.equal(req.headers['content-type'], 'application/json')
     res.statusCode = 204
-    res.end();
+    res.end()
   })
 
   server.listen(0, function () {

@@ -246,6 +246,32 @@ test('should retry if the error is coming from the server after receiving the fi
   })
 })
 
+test('should retry if the socket is closed immediately on server side without delay', function (t) {
+  t.plan(5)
+  let nbTry = 0
+  const server = http.createServer(function (req, res) {
+    nbTry++
+    res.statusCode = 200
+    res.write('12345')
+    t.equal(req.url, '/')
+    if (nbTry === 1) {
+      t.equal(nbTry, 1)
+      res.socket.destroy()
+    } else {
+      res.end('6789')
+    }
+  })
+  const newInstance = rock.extend({ maxRetry: 2 })
+  server.listen(0, function () {
+    const port = server.address().port
+    newInstance.concat('http://localhost:' + port, function (err, res, data) {
+      t.error(err)
+      t.equal(data.toString(), '123456789')
+      server.close()
+    })
+  })
+})
+
 test('should destroy and restart a new INPUT stream on retry (error on server side)', function (t) {
   t.plan(13)
 

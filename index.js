@@ -71,7 +71,7 @@ function extend (defaultOptions = {}) {
         streamToCleanOnError.forEach(s => s.destroy(err))
         if (opts.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
           opts.prevError = err
-          return setTimeout(rock, opts.retryDelay, opts, cb) // retry in 100ms
+          return setTimeout(rock, opts.retryDelay, opts, cb) // retry
         }
         return cb(err)
       }
@@ -83,7 +83,7 @@ function extend (defaultOptions = {}) {
     }
     function listen (stream, isLast = false) {
       streamToCleanOnError.push(stream)
-      stream.once('error', onRequestEnd)
+      stream.on('error', onRequestEnd) // do not use once()! A stream can emit mutiple error event
       stream.once('close', () => {
         if (stream.readableEnded === false || stream.writableEnded === false) return onRequestEnd(new Error('ERR_STREAM_PREMATURE_CLOSE'))
         if (isLast === true) return onRequestEnd()
