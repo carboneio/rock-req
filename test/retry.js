@@ -440,6 +440,7 @@ test('should accept finish/cleanup on INPUT stream even if there is a timeout an
       res.end('realEnd')
     }
   })
+  server.setTimeout(3000) // NodeJS < 19 does not close keep-alive socket automatically
   const newInstance = rock.extend({ maxRetry: 2 })
   server.listen(0, function () {
     const port = server.address().port

@@ -123,6 +123,31 @@ test('timeout option', function (t) {
   })
 })
 
+test('should not timeout even if keepAliveDuration is lower than response time', function (t) {
+  t.plan(3)
+
+  const server = http.createServer(function (req, res) {
+    t.equal(req.url, '/path')
+    setTimeout(function () {
+      res.end('response')
+    }, 2000)
+  })
+
+  const _newRock = rock.extend({keepAliveDuration : 1000});
+
+  server.listen(0, function () {
+    const port = server.address().port
+    _newRock({
+      url: 'http://localhost:' + port + '/path',
+      maxRetry: 0
+    }, function (err, res, data) {
+      t.error(err)
+      t.equal(data.toString(), 'response')
+      server.close()
+    })
+  })
+})
+
 test('rewrite POST redirects to GET', function (t) {
   t.plan(7)
 
@@ -143,6 +168,7 @@ test('rewrite POST redirects to GET', function (t) {
       res.end()
     }
   })
+  server.setTimeout(1000) // NodeJS < 19 does not close keep-alive socket automatically
 
   server.listen(0, function () {
     const port = server.address().port

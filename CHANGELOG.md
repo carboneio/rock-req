@@ -1,5 +1,8 @@
 # Rock-req
 
+### 5.1.3
+  - Remove default request timeout when `keepAliveDuration` is used (was 3s by default)
+
 ### 5.1.2
   - Fix retry even if the socket is closed immediately on server side (socket hang up)
 

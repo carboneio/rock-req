@@ -23,7 +23,7 @@ function extend (defaultOptions = {}) {
   }
   defaultOptions.headers = applyDefault(cloneLowerCase(defaultOptions.headers), _default.headers)
   _default = applyDefault(defaultOptions, _default) // inherits of parent options
-  const agents = [http, https].map(h => (_default.keepAliveDuration > 0) ? new h.Agent({ keepAlive: true, keepAliveMsecs: _default.keepAliveDuration, timeout: _default.keepAliveDuration /* remove free socket node < 19 */ }) : undefined)
+  const agents = [http, https].map(h => (_default.keepAliveDuration > 0) ? new h.Agent({ keepAlive: true, keepAliveMsecs: _default.keepAliveDuration }) : undefined)
 
   function rock (opts, directBody, cb) {
     if (typeof opts === 'string') opts = { url: opts }

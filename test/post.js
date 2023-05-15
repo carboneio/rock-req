@@ -162,7 +162,7 @@ test('post with empty JSON response should not crash', function (t) {
     res.statusCode = 204
     res.end()
   })
-
+  server.setTimeout(1000) // NodeJS < 19 does not close keep-alive socket automatically
   server.listen(0, function () {
     const port = server.address().port
     const opts = {
