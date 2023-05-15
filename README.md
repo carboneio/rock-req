@@ -76,16 +76,17 @@ Stop using "slow by-default" and "false-light" HTTP request libraries!
 > Tested on Macbook Pro M1 Max
 
 
-## Installation and usage
+## Install
 
 ```bash
   npm install rock-req
 ```
 
-To reduce Node package file size, [the full documentation is here](doc/api.md)
+## Documentation
 
+[The full documentation is here](doc/api.md) to reduce Node package file size.
 
-# Supporters
+## Supporters
 
 This packaged in maintained by Carbone:
 
