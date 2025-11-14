@@ -14,7 +14,7 @@ All functions accept two or three parameters:
 ```js
   const rock = require('rock-req')
   rock(optsOrURL [, bodyOrStreamFn], callback)
-````
+```
 
 - `optsOrURL` can be an object or a the URL 
 - `bodyOrStreamFn` can be a buffer/string/object or a function returning an input stream for sending the body of POST/PUT/PATCH/DELETE requests
@@ -29,20 +29,16 @@ rock.get('http://ex.com', (err, res, data) => {
   console.log(res.statusCode) // 200
   console.log(data) // Buffer('server response')
 })
+// Head request
+rock.head('http://ex.com', (err, res, data) => {})
 ```
 
 Alternative syntax:
 
 ```js
-rock({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
+rock({ method: 'GET' /* or HEAD */, url: 'http://ex.com' }, function (err, res, data) {} )
 // OR
-rock.concat({ method: 'GET', url: 'http://ex.com' }, function (err, res, data) {} )
-```
-
-Head requests:
-
-```js
-rock.head('http://example.com', (err, res, data) => {})
+rock.concat({ method: 'GET' /* or HEAD */, url: 'http://ex.com' }, function (err, res, data) {} )
 ```
 
 ### POST, PUT, PATCH, DELETE requests
@@ -51,12 +47,15 @@ Use the second paramater to pass the body:
 
 ```js
 rock.post('http://ex.com', 'POST body', (err, res, data) => {})
+rock.put('http://ex.com', 'POST body', (err, res, data) => {})
+rock.patch('http://ex.com', 'POST body', (err, res, data) => {})
+rock.delete('http://ex.com', 'POST body', (err, res, data) => {})
 ```
 
 Alternative syntax:
 
 ```js
-rock({ method: 'POST', url : 'http://ex.com', body : 'POST body' }, function (err, res, data) {} )
+rock({ method: 'POST' /* PUT, PATCH, DELETE */, url : 'http://ex.com', body : 'POST body' }, function (err, res, data) {} )
 ```
 
 ### JSON request shortcuts
@@ -67,12 +66,16 @@ Automatically serialize/deserialize request and response with JSON with `getJSON
 rock.putJSON('http://ex.com', { id : 123 }, (err, res, data) => {
   console.log(data) // already JSON.parsed
 })
+rock.getJSON('http://ex.com', { id : 123 }, (err, res, data) =>{})
+rock.postJSON('http://ex.com', { id : 123 }, (err, res, data) =>{})
+rock.patchJSON('http://ex.com', { id : 123 }, (err, res, data) =>{})
+rock.deleteJSON('http://ex.com', { id : 123 }, (err, res, data) =>{})
 ```
 
 Alternative syntax:
 
 ```js
-rock({ method: 'PUT', url: 'http://ex.com', body: { id : 123 }, json: true }, function (err, res, data) {} )
+rock({ method: 'PUT' /* PUT, ... */, url: 'http://ex.com', body: { id : 123 }, json: true }, function (err, res, data) {} )
 ```
 
 ### Promises Interface
