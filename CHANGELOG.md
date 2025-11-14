@@ -1,5 +1,14 @@
 # Rock-req
 
+### 5.2.0
+  - Added a promises interface with `rock.promises`
+  - Added support for basic ESM import: `import rock from "rock-req";`
+  - Added the option `jsonResponse <boolean>`.
+    This forces JSON response parsing, or allows mixed responses even when `json = true`. Default: same as `json`. Note: `jsonResponse` cannot be set to `true` if `json = false`.
+  - Updated CI for newer Node versions  
+  - Made tests compatible with Node 24+
+  - Updated benchmarks and all dependencies
+
 ### 5.1.3
   - Remove default request timeout when `keepAliveDuration` is used (was 3s by default)
 

@@ -3,9 +3,9 @@ const process = require('node:process')
 
 const Benchmark = require('benchmark')
 const axios = require('axios')
-const fetch = require('node-fetch')
+const fetch = require('node-fetch').default
 const simpleGet = require('simple-get')
-const got = require('got')
+const got = require('got').default
 const phin = require('phin')
 const request = require('request')
 const superagent = require('superagent')
@@ -47,8 +47,7 @@ suite.add('rock-req | POST |', {
 suite.add('got | GET |', {
   defer: true,
   fn (defer) {
-    got
-      .get(URL, { throwHttpErrors: false, retry: 0 })
+    got(URL, { throwHttpErrors: false, retry: { limit: 0 } })
       .then(() => defer.resolve())
       .catch(() => defer.resolve())
   }
@@ -57,8 +56,7 @@ suite.add('got | GET |', {
 suite.add('got | POST |', {
   defer: true,
   fn (defer) {
-    got
-      .post(URL, { throwHttpErrors: false })
+    got.post(URL, { throwHttpErrors: false, retry: { limit: 0 } })
       .then(() => defer.resolve())
       .catch(() => defer.resolve())
   }
@@ -145,26 +143,6 @@ suite.add('axios | POST |', {
   fn (defer) {
     axios
       .post(PATH)
-      .then(() => defer.resolve())
-      .catch(() => defer.resolve())
-  }
-})
-
-suite.add('got | GET |', {
-  defer: true,
-  fn (defer) {
-    got
-      .get(URL, { throwHttpErrors: false, retry: 0 })
-      .then(() => defer.resolve())
-      .catch(() => defer.resolve())
-  }
-})
-
-suite.add('got | POST |', {
-  defer: true,
-  fn (defer) {
-    got
-      .post(URL, { throwHttpErrors: false })
       .then(() => defer.resolve())
       .catch(() => defer.resolve())
   }

@@ -76,7 +76,7 @@ function extend (defaultOptions = {}) {
         return cb(err)
       }
       let data = Buffer.concat(chunks)
-      if (opts.json) {
+      if (opts.json && opts.jsonResponse !== false) {
         try { data = data.length > 0 ? JSON.parse(data.toString()) : null } catch (e) { return cb(e, response, data) }
       }
       cb(null, response, data)
@@ -148,6 +148,7 @@ function extend (defaultOptions = {}) {
     return req
   }
 
+  rock.promises = {};
   ;['get', 'post', 'put', 'patch', 'head', 'delete', 'getJSON', 'postJSON', 'putJSON', 'patchJSON', 'headJSON', 'deleteJSON'].forEach(method => {
     const jsonShortcut = /JSON$/.test(method) === true
     const methodShortcut = jsonShortcut === true ? method.toUpperCase().slice(0, -4) : method.toUpperCase()
@@ -156,6 +157,14 @@ function extend (defaultOptions = {}) {
       opts.method = methodShortcut
       opts.json = jsonShortcut
       return rock(opts, body, cb)
+    }
+    rock.promises[method] = (opts, body) => {
+      return new Promise((resolve, reject) => {
+        rock[method](opts, body, (err, response, data) => {
+          if (err) return reject(err)
+          resolve({ response, data })
+        })
+      })
     }
   })
   rock.concat = rock

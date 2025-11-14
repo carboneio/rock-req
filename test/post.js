@@ -153,6 +153,36 @@ test('post (json body)', function (t) {
   })
 })
 
+test('post (json body, jsonResponse false)', function (t) {
+  t.plan(5)
+
+  const server = http.createServer(function (req, res) {
+    t.equal(req.method, 'POST')
+    t.equal(req.headers['content-type'], 'application/json')
+    res.statusCode = 200
+    req.pipe(res)
+  })
+
+  server.listen(0, function () {
+    const port = server.address().port
+    const opts = {
+      method: 'POST',
+      url: 'http://localhost:' + port,
+      body: {
+        message: 'this is the body'
+      },
+      json: true,
+      jsonResponse: false
+    }
+    rock.concat(opts, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(data.toString(), '{"message":"this is the body"}')
+      server.close()
+    })
+  })
+})
+
 test('post with empty JSON response should not crash', function (t) {
   t.plan(5)
 
