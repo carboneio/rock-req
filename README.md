@@ -57,7 +57,7 @@ Stop using "slow-by-default" and "false-light" HTTP request libraries!
 **2025-11-14 on MacBook Pro M4 Max with all dependencies updated on this date**
 
 
-| Library      | NodeJS 22 | NodeJS 24   | NodeJS 25  | Bun v1.3.2 | Size deps inc<br>LOC 2025/2023 |
+| Library      | NodeJS 22 | NodeJS 24   | NodeJS 25  | Bun v1.3.2 | LOC 2025/2023 |
 |--------------|-----------:|---------- --:|---------:|-----------:|----------------:|
 | rock-req 🙋‍♂️  | 26842 ops  | 26782 ops  | 26179 ops  | 21229 ops  | 152 (+5%)      |
 | simple-get   | 26532 ops  | 26802 ops  | 25954 ops  | 21187 ops  | 317 (+0%)      |
