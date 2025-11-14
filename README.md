@@ -38,7 +38,7 @@ It also supports many features:
 - Automatically destroy input/output **stream** on error and premature close event
 - **Advanced retries**
 - URL Rewrite
-- **Ultra-fast (> 20k ops)**
+- **Ultra-fast (> 20k req/s)**
 - Keep Alive by default (3000ms)
 - Composable
 - Timeouts
@@ -86,7 +86,8 @@ Stop using "slow-by-default" and "false-light" HTTP request libraries!
 | _undici_*    | 24095 ops     | 24378 ops     |  24191 ops     | 16225 LOC      |
 
 
-> LOC = Lines of Code, including dependencies (excluding dev dependencies)
+> `LOC` = Lines of Code, including dependencies (excluding dev dependencies)
+> `ops` = request per second
 
 > Since Node.js 20, HTTP keep-alive is activated by default, just like in `rock-req`.  This improves the overall performance of all frameworks.
 
