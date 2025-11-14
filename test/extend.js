@@ -1,7 +1,7 @@
 const rock = require('../')
 const http = require('http')
 const test = require('tape')
-const selfSignedHttps = require('self-signed-https')
+const selfSignedHttps = require('./cert/self-signed-https')
 
 test('create new instance, merge with request header, should lower case headers', function (t) {
   t.plan(14)

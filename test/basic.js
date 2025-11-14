@@ -1,6 +1,6 @@
 const rock = require('../')
 const http = require('http')
-const selfSignedHttps = require('self-signed-https')
+const selfSignedHttps = require('./cert/self-signed-https')
 const test = require('tape')
 
 test('simple get', function (t) {

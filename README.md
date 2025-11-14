@@ -6,7 +6,7 @@
 <h1 align="center" style="border-bottom:none;">Rock-req</h1>
 
 <p align="center">⭐️⭐️ Ensure your HTTP requests always reach their destination as <b>efficiently</b> as possible! ⭐️⭐️</p>
-<p align="center">Tested on Mac, Linux, Windows with NodeJS 16, 18, 19, 20</p>
+<p align="center">Tested on Mac, Linux, Windows with NodeJS 16, 18, 19, 20, 22, 24, 25</p>
 
 [![npm][npm-image]][npm-url]  [![ci][ci-image]][ci-url]  [![javascript style guide][standard-image]][standard-url]
 
@@ -19,7 +19,7 @@
 
 ## 🔥 Why?
 
-In most existing libraries (2023):
+In most existing libraries (2025):
 
 - Managing **reliable retries** is difficult, tricky with streams and not battle-tested
 - Using **multiple forward proxies** has several benefits like **higher availability** and **increased bandwidth** but 
@@ -51,7 +51,25 @@ When the callback is called, the request is 100% finished, even with streams.
 
 ## 🚀 Benchmark Rock-req vs got, axios, node-fetch, phin, simple-get, superagent, ...
 
-Stop using "slow by-default" and "false-light" HTTP request libraries!
+Stop using "slow-by-default" and "false-light" HTTP request libraries!
+
+**2025-11-14 on MacBook Pro M4 Max with all dependencies updated on this date**
+
+
+| Library      | NodeJS 22      | NodeJS 24     | NodeJS 25       | Bun v1.3.2     | Size deps inc (2025/2023)  |
+|--------------|---------------:|---------------:|---------------:|---------------:|---------------------------:|
+| rock-req 🙋‍♂️  | 26842 req/s    | 26782 req/s    | 26179 req/s    | 21229 req/s    | 152 LOC (+5%)               |
+| simple-get   | 26532 req/s    | 26802 req/s    | 25954 req/s    | 21187 req/s    | 317 LOC (+0%)              |
+| axios        |  4110 req/s    |  3999 req/s    |  3996 req/s    | 14788 req/s    | 19883 LOC (+42%)           |
+| got          | 14786 req/s    | 15234 req/s    | 15149 req/s    | 15287 req/s    | 16904 LOC (+83%)           |
+| fetch        | 15676 req/s    | 16252 req/s    | 15784 req/s    | 27675 req/s    | 54211 LOC (+306%)          |
+| request      | 17102 req/s    | 14586 req/s    | 14346 req/s    | 18202 req/s    | 58057 LOC (+24%)           |
+| superagent   |  3862 req/s    |  3979 req/s    |  3889 req/s    | 19271 req/s    | 31913 LOC (+98%)           |
+| phin         | 15549 req/s    | 14160 req/s    | 13915 req/s    | 15430 req/s    | 20064 LOC (+5960%)         |
+| _undici_*    | 32480 req/s    | 33272 req/s    | 32738 req/s    | 25961 req/s    | 23235 LOC (+43%)           |
+
+
+**2023-04-19 on Macbook Pro M1 Max with all dependencies updated on this date**
 
 
 | Library      | NodeJS 16     | NodeJS 18     | NodeJS 20*     | Size deps inc. |
@@ -67,14 +85,13 @@ Stop using "slow by-default" and "false-light" HTTP request libraries!
 | _undici_*    | 24095 req/s   | 24378 req/s   |  24191 req/s   | 16225 LOC      |
 
 
-> NodeJS 20 activates HTTP keep-alive by default, like `rock-req`
+> Since Node.js 20, HTTP keep-alive is activated by default, just like in `rock-req`.  This improves the overall performance of all frameworks.
 
-> `undici` is a low-level API, faster alternative to the native NodeJS http module. It is the glass ceiling limit for NodeJS.
+> `undici` is a low-level API and a faster alternative to the native Node.js HTTP module. It represents the performance ceiling for Node.js.
 
-> `rock-req` uses only the native NodeJS http module and provides many high-level features, a lot more than `phin` and `simple-get` with fewer lines of code.
+> `rock-req` uses only the native Node.js HTTP module and provides many high-level features — far more than `phin` and `simple-get` — with fewer lines of code.
 
-> Tested on Macbook Pro M1 Max
-
+> Interestingly, the differences are less visible on Bun.sh.
 
 ## Install
 
@@ -92,7 +109,7 @@ This packaged in maintained by Carbone:
 
 <p>
   <a href="https://carbone.io" alt="Carbone.io - Efficient PDF / DOCX / XLSX / CSV / HTML / XML generator with templates and JSON">
-    <img src="https://raw.githubusercontent.com/carboneio/rock-req/master/doc/carbone-logo.svg" alt="Carbone.io logo" height="60"/>
+    <img src="https://carbone.io/img/carbone-logo.svg" alt="Carbone.io logo" height="60"/>
   </a>
 </p>
 

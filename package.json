@@ -1,15 +1,14 @@
 {
   "name": "rock-req",
   "description": "Ultra-light (150 LOC, No dependencies) & Ultra-fast request library with reliable retry on failure, http/https, redirects, gzip/deflate/brotli, extensible, proxy, streams, JSON mode, forms, timeout",
-  "version": "5.1.3",
+  "version": "5.2.0",
   "author": {
     "name": "David Grelaud & Feross Aboukhadijeh"
   },
   "devDependencies": {
-    "self-signed-https": "1.0.5",
-    "standard": "*",
+    "standard": "17.1.2",
     "string-to-stream": "3.0.1",
-    "tape": "5.6.3"
+    "tape": "5.9.0"
   },
   "engines": {
     "node": ">=16"
@@ -37,6 +36,9 @@
   ],
   "license": "MIT",
   "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/carboneio/rock-req.git"

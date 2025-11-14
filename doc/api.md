@@ -75,6 +75,32 @@ Alternative syntax:
 rock({ method: 'PUT', url: 'http://ex.com', body: { id : 123 }, json: true }, function (err, res, data) {} )
 ```
 
+### Promises Interface
+
+New in v5.2.0
+
+```js
+const { res,  data } = await rock.promises.post('http://ex.com', 'POST body');
+```
+
+All these function are available:
+
+```js
+rock.promises.get(optsOrURL)
+rock.promises.head(optsOrURL)
+rock.promises.post(optsOrURL, body)
+rock.promises.put(optsOrURL, body)
+rock.promises.patch(optsOrURL, body)
+rock.promises.delete(optsOrURL, body)
+
+rock.promises.getJSON(optsOrURL)
+rock.promises.postJSON(optsOrURL, body)
+rock.promises.putJSON(optsOrURL, body)
+rock.promises.patchJSON(optsOrURL, body)
+rock.promises.deleteJSON(optsOrURL, body)
+```
+
+
 ### All options:
 
 
@@ -96,7 +122,8 @@ rock(opts, function (err, res, data) {} )
   - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 1
   - `followRedirects <boolean>` do not follow redirects
   - `body <buffer> | <string> | <object> | <function>` body to post
-  - `json <boolean>` automatically stringify/parse request/response Default : false
+  - `json <boolean>` automatically stringifies the request and parses the response. Default: false  
+  - `jsonResponse <boolean>` forces JSON response parsing or not to accept mixed responses even if `json = true`. Default: same as `json`
   - `url <string>` the destination URL
   - `method <string>` A string specifying the HTTP request method. Default: 'GET'.
   - `headers <object>` An object containing request headers. Default: 'accept-encoding': 'gzip, deflate, br'
@@ -520,6 +547,5 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
 ## TODO:
 
 - [ ] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
-- [ ] promisify ?
 - [ ] typescript type ?
 
