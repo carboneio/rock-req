@@ -1,7 +1,7 @@
 {
   "name": "rock-req",
   "description": "Ultra-light (150 LOC, No dependencies) & Ultra-fast request library with reliable retry on failure, http/https, redirects, gzip/deflate/brotli, extensible, proxy, streams, JSON mode, forms, timeout",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "author": {
     "name": "David Grelaud & Feross Aboukhadijeh"
   },

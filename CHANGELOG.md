@@ -1,5 +1,8 @@
 # Rock-req
 
+### 5.2.1
+  - Improved README.md for NPM.com (reduced table width)
+
 ### 5.2.0
   - Added a promises interface with `rock.promises`
   - Added support for basic ESM import: `import rock from "rock-req";`
