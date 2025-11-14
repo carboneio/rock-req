@@ -42,6 +42,7 @@ It also supports many features:
 - Keep Alive by default (3000ms)
 - Composable
 - Timeouts
+- Promises interface
 - HTTPS / HTTP
 - Composes well with npm packages for features like cookies, proxies, form data, & OAuth
 - Keep 98% of the `simple-get` API (fork source)
