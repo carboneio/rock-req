@@ -57,8 +57,8 @@ Stop using "slow-by-default" and "false-light" HTTP request libraries!
 **2025-11-14 on MacBook Pro M4 Max with all dependencies updated on this date**
 
 
-| Library      | NodeJS 22 | NodeJS 24   | NodeJS 25  | Bun v1.3.2 | LOC 2025/2023 |
-|--------------|-----------:|---------- --:|---------:|-----------:|----------------:|
+| Library      | NodeJS 22 | NodeJS 24   | NodeJS 25  | Bun v1.3.2 | LOC (2025/2023) |
+|--------------|-----------:|------------:|---------:|-----------:|----------------:|
 | rock-req 🙋‍♂️  | 26842 ops  | 26782 ops  | 26179 ops  | 21229 ops  | 152 (+5%)      |
 | simple-get   | 26532 ops  | 26802 ops  | 25954 ops  | 21187 ops  | 317 (+0%)      |
 | axios        |  4110 ops  |  3999 ops  |  3996 ops  | 14788 ops  | 19883 (+42%)   |
@@ -85,6 +85,8 @@ Stop using "slow-by-default" and "false-light" HTTP request libraries!
 | phin         |  3178 ops     |  1164 ops     |  21299 ops     |   331 LOC      |
 | _undici_*    | 24095 ops     | 24378 ops     |  24191 ops     | 16225 LOC      |
 
+
+> LOC = Lines of Code, including dependencies (excluding dev dependencies)
 
 > Since Node.js 20, HTTP keep-alive is activated by default, just like in `rock-req`.  This improves the overall performance of all frameworks.
 
