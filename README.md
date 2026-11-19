@@ -32,7 +32,7 @@ In most existing libraries (2025):
 It also supports many features:
 
 - Follows redirects
-- Handles **gzip/deflate/brotli** responses
+- Handles **gzip/deflate/brotli** responses (or returns the raw body with `decompress: false`)
 - Modify defaults
 - Extend and create new instances
 - Automatically destroy input/output **stream** on error and premature close event

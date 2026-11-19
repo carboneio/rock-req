@@ -2,6 +2,7 @@ const rock = require('../')
 const http = require('http')
 const selfSignedHttps = require('./cert/self-signed-https')
 const test = require('tape')
+const str = require('string-to-stream')
 
 test('follow redirects (up to 10)', function (t) {
   t.plan(14)
@@ -331,6 +332,110 @@ test('follow redirects without "url" option', function (t) {
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
       server.close()
+    })
+  })
+})
+
+// Redirect server: /redirect answers `statusCode` to /target which echoes the request
+function startRedirectServer (statusCode, cb) {
+  const server = http.createServer(function (req, res) {
+    if (req.url === '/redirect') {
+      req.resume()
+      res.statusCode = statusCode
+      res.setHeader('Location', '/target')
+      return res.end()
+    }
+    let body = ''
+    req.on('data', function (chunk) { body += chunk })
+    req.on('end', function () {
+      res.end(JSON.stringify({ method: req.method, body, length: req.headers['content-length'], type: req.headers['content-type'], custom: req.headers['x-custom'] }))
+    })
+  })
+  server.listen(0, function () { cb(server, 'http://localhost:' + server.address().port + '/redirect') })
+}
+
+;['POST', 'PUT', 'PATCH', 'DELETE'].forEach(function (method) {
+  test('303 redirect changes ' + method + ' to GET and drops the body', function (t) {
+    t.plan(2)
+    startRedirectServer(303, function (server, url) {
+      rock({ url, method, body: 'payload', headers: { 'content-type': 'text/plain', 'x-custom': 'kept' } }, function (err, res, data) {
+        t.error(err)
+        t.deepEqual(JSON.parse(data), { method: 'GET', body: '', custom: 'kept' })
+        server.close()
+      })
+    })
+  })
+})
+
+test('303 redirect changes a JSON POST with a stream body to GET', function (t) {
+  t.plan(2)
+  startRedirectServer(303, function (server, url) {
+    rock.postJSON({ url, body: () => str('{"a":1}') }, function (err, res, data) {
+      t.error(err)
+      t.equal(data.method, 'GET')
+      server.close()
+    })
+  })
+})
+
+;['GET', 'HEAD'].forEach(function (method) {
+  test('303 redirect keeps ' + method, function (t) {
+    t.plan(2)
+    let visited = null
+    const server = http.createServer(function (req, res) {
+      if (req.url === '/redirect') {
+        res.statusCode = 303
+        res.setHeader('Location', '/target')
+        return res.end()
+      }
+      visited = req.method
+      res.end()
+    })
+    server.listen(0, function () {
+      rock({ url: 'http://localhost:' + server.address().port + '/redirect', method }, function (err) {
+        t.error(err)
+        t.equal(visited, method)
+        server.close()
+      })
+    })
+  })
+})
+
+;[301, 302].forEach(function (statusCode) {
+  test(statusCode + ' redirect still changes POST to GET (unchanged)', function (t) {
+    t.plan(2)
+    startRedirectServer(statusCode, function (server, url) {
+      rock({ url, method: 'POST', body: 'payload', headers: { 'content-type': 'text/plain' } }, function (err, res, data) {
+        t.error(err)
+        t.deepEqual(JSON.parse(data), { method: 'GET', body: '' })
+        server.close()
+      })
+    })
+  })
+
+  test(statusCode + ' redirect still keeps PUT and its body (unchanged)', function (t) {
+    t.plan(2)
+    startRedirectServer(statusCode, function (server, url) {
+      rock({ url, method: 'PUT', body: 'payload', headers: { 'content-type': 'text/plain' } }, function (err, res, data) {
+        t.error(err)
+        t.deepEqual(JSON.parse(data), { method: 'PUT', body: 'payload', length: '7', type: 'text/plain' })
+        server.close()
+      })
+    })
+  })
+})
+
+;[307, 308].forEach(function (statusCode) {
+  ;['POST', 'PUT'].forEach(function (method) {
+    test(statusCode + ' redirect keeps ' + method + ' and its body (unchanged)', function (t) {
+      t.plan(2)
+      startRedirectServer(statusCode, function (server, url) {
+        rock({ url, method, body: 'payload', headers: { 'content-type': 'text/plain' } }, function (err, res, data) {
+          t.error(err)
+          t.deepEqual(JSON.parse(data), { method, body: 'payload', length: '7', type: 'text/plain' })
+          server.close()
+        })
+      })
     })
   })
 })

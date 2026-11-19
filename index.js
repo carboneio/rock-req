@@ -9,26 +9,71 @@ const isStream = o => o !== null && typeof o === 'object' && typeof o.pipe === '
 const isFnStream = o => o instanceof Function
 function applyDefault (t, d) { for (const a in d) { if (t[a] === undefined) t[a] = d[a] } return t }
 function cloneLowerCase (s) { const n = {}; for (const a in s) { n[a.toLowerCase()] = s[a] } return n }
+const destroy = http.ClientRequest.prototype.destroy
+function abort (err) { this.rockAborted = true; return destroy.call(this, err) } // req.destroy() or req.abort() by the user: never retried
+function sweep (agent) { // destroy the free sockets idle for too long, then wake up for the next one. In-flight sockets are not in freeSockets
+  const now = Date.now()
+  let next = Infinity
+  for (const name in agent.freeSockets) {
+    for (const socket of agent.freeSockets[name]) {
+      if (socket.rockIdleEnd <= now) socket.destroy()
+      else if (socket.rockIdleEnd < next) next = socket.rockIdleEnd
+    }
+  }
+  agent.rockSweep = next === Infinity ? undefined : setTimeout(sweep, next - now, agent).unref()
+  agent.rockSweepAt = next
+}
+function retryAfter (res) { // RFC 9110 §10.2.3: delay-seconds or HTTP-date, in ms. Missing, invalid or past: 0
+  const h = res.statusCode === 429 || res.statusCode === 503 ? res.headers['retry-after'] : undefined
+  const ms = h === undefined ? 0 : /^\d+$/.test(h) ? h * 1000 : Date.parse(h) - Date.now()
+  return ms > 0 ? ms : 0
+}
 
 function extend (defaultOptions = {}) {
   let _default = {
     headers: { 'accept-encoding': 'gzip, deflate, br' },
     maxRedirects: 10,
     maxRetry: 1,
-    retryDelay: 10, // ms
+    retryDelay: 10, // ms, doubled on each retry, plus jitter
     keepAliveDuration: 3000, // ms
     retryOnCode: [408, 429, 502, 503, 504, 521, 522, 524],
-    retryOnError: ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED', 'EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN'],
+    retryOnError: ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED', 'EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EHOSTUNREACH', 'EAI_AGAIN'],
     beforeRequest: o => o
   }
   defaultOptions.headers = applyDefault(cloneLowerCase(defaultOptions.headers), _default.headers)
   _default = applyDefault(defaultOptions, _default) // inherits of parent options
-  const agents = [http, https].map(h => (_default.keepAliveDuration > 0) ? new h.Agent({ keepAlive: true, keepAliveMsecs: _default.keepAliveDuration }) : undefined)
+  const idleTimeout = Number(_default.keepAliveTimeout ?? 5000) // ms, like Node's globalAgent. Like decompress (true), not in defaults: not copied in each request (faster)
+  const agents = [http, https].map(h => {
+    if (!(_default.keepAliveDuration > 0)) return undefined
+    class RockAgent extends h.Agent {
+      keepSocketAlive (socket) { // the socket goes to the free pool. No socket.setTimeout per request (slow): one sweep timer per agent
+        if (super.keepSocketAlive(socket) === false) return false
+        const hint = socket._httpMessage?.res?.headers['keep-alive'] // server hint minus 1s, like Node
+        const timeout = hint === undefined ? idleTimeout : Math.min(idleTimeout, (/^timeout=(\d+)/.exec(hint)?.[1] ?? Infinity) * 1000 - 1000)
+        if (timeout <= 0) return false
+        socket.rockIdleEnd = Date.now() + timeout
+        if (this.rockSweep === undefined || socket.rockIdleEnd < this.rockSweepAt) {
+          clearTimeout(this.rockSweep)
+          this.rockSweep = setTimeout(sweep, timeout, this).unref()
+          this.rockSweepAt = socket.rockIdleEnd
+        }
+        return true
+      }
+    }
+    return new (idleTimeout > 0 ? RockAgent : h.Agent)({ keepAlive: true, keepAliveMsecs: _default.keepAliveDuration })
+  })
+
+  function retry (opts, cb, wait = 0) { // failure only: retryDelay * 2^n + jitter, capped by retryMaxDelay, at least Retry-After
+    const d = opts.retryDelay * 2 ** (opts.maxRetry - opts.remainingRetry - 1)
+    setTimeout(rock, Math.max(wait, Math.min(opts.retryMaxDelay ?? 2000, d + Math.random() * d)), opts, cb)
+  }
 
   function rock (opts, directBody, cb) {
     if (typeof opts === 'string') opts = { url: opts }
     if (!cb) { cb = directBody } else { opts.body = directBody }
-    opts.headers = applyDefault(cloneLowerCase(opts.headers), _default.headers)
+    const headers = cloneLowerCase(opts.headers)
+    if (headers.range !== undefined && headers['accept-encoding'] === undefined) headers['accept-encoding'] = 'identity' // a range of the compressed body cannot be decompressed
+    opts.headers = applyDefault(headers, _default.headers)
     opts = applyDefault(opts, _default)
     opts.remainingRetry = opts.remainingRetry ?? opts.maxRetry
     opts.remainingRedirects = opts.remainingRedirects ?? opts.maxRedirects
@@ -68,10 +113,11 @@ function extend (defaultOptions = {}) {
       if (requestAbortedOrEnded === true) return
       requestAbortedOrEnded = true
       if (err) {
+        const aborted = req.rockAborted === true // read before destroying the streams below (req included)
         streamToCleanOnError.forEach(s => s.destroy(err))
-        if (opts.retryOnError.indexOf(err?.code) !== -1 && --opts.remainingRetry > 0) {
+        if (aborted === false && opts.retryOnError.indexOf(err?.code) !== -1 && opts.remainingRetry-- > 0) {
           opts.prevError = err
-          return setTimeout(rock, opts.retryDelay, opts, cb) // retry
+          return retry(opts, cb)
         }
         return cb(err)
       }
@@ -92,11 +138,12 @@ function extend (defaultOptions = {}) {
     }
     const req = protocol.request(opts, res => {
       opts.prevStatusCode = res.statusCode
+      let retryWait
       // retry and leave
-      if (res.statusCode > 400 /* speed up */ && opts.retryOnCode.indexOf(res.statusCode) !== -1 && opts.remainingRetry-- > 0) {
+      if (res.statusCode > 400 /* speed up */ && opts.retryOnCode.indexOf(res.statusCode) !== -1 && (retryWait = retryAfter(res)) <= (opts.retryMaxDelay ?? 2000) && opts.remainingRetry-- > 0) {
         requestAbortedOrEnded = true // discard all new events which could come after for this request to avoid calling the callback
         res.resume() // Discard response, consume data until the end to free up memory. Mandatory!
-        return setTimeout(rock, opts.retryDelay, opts, cb) // retry later
+        return retry(opts, cb, retryWait) // retry later
       }
       // or redirect and leave
       if (opts.followRedirects !== false && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -113,8 +160,8 @@ function extend (defaultOptions = {}) {
           delete opts.headers.cookie
           delete opts.headers.authorization
         }
-        if (opts.method === 'POST' && [301, 302].includes(res.statusCode)) {
-          opts.method = 'GET' // On 301/302 redirect, change POST to GET (see #35)
+        if ((opts.method === 'POST' && [301, 302].includes(res.statusCode)) || (res.statusCode === 303 && opts.method && opts.method !== 'GET' && opts.method !== 'HEAD')) {
+          opts.method = 'GET' // On 301/302 redirect, change POST to GET (see #35). On 303, change all methods except HEAD to GET (RFC 9110)
           delete opts.headers['content-length']; delete opts.headers['content-type']; delete opts.body; delete opts.form
         }
         if (opts.remainingRedirects-- === 0) {
@@ -125,21 +172,24 @@ function extend (defaultOptions = {}) {
       }
       // or read response and leave at the end
       response = res
-      const contentEncoding = opts.method !== 'HEAD' ? (res.headers['content-encoding'] || '').toLowerCase() : ''
+      const status = res.statusCode // no body (HEAD, 204, 205, 304. Node never gives 1xx here) or a range of the compressed body (206): never decompress
+      const contentEncoding = opts.decompress !== false && opts.method !== 'HEAD' && status !== 204 && status !== 205 && status !== 206 && status !== 304 ? (res.headers['content-encoding'] || '').toLowerCase() : ''
       const output = opts.output ? opts.output(opts, res) : new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } })
       switch (contentEncoding) {
         case 'br':
           listen(res).pipe(listen(zlib.createBrotliDecompress())).pipe(listen(output, true)); break
         case 'gzip':
+        case 'x-gzip':
         case 'deflate':
           listen(res).pipe(listen(zlib.createUnzip())).pipe(listen(output, true)); break
         default:
           listen(res).pipe(listen(output, true)); break
       }
     })
+    req.destroy = abort
     req.once('timeout', () => {
       const _error = new Error('TimeoutError'); _error.code = 'ETIMEDOUT'
-      req.destroy(_error) // we must destroy manually and send the error to the error listener to call onRequestEnd
+      destroy.call(req, _error) // we must destroy manually and send the error to the error listener to call onRequestEnd. Not a user abort: retried
     })
 
     if (isFnStream(body) === true) listen(body(opts)).pipe(listen(req))

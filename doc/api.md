@@ -123,13 +123,16 @@ rock(opts, function (err, res, data) {} )
 
   - `maxRedirects <number>`overwrite global maximum number of redirects. Defaults to 10
   - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 1
-  - `followRedirects <boolean>` do not follow redirects
+  - `retryDelay <number>`, `retryMaxDelay <number>`, `retryOnCode <number[]>`, `retryOnError <string[]>` see [Retry on failure](#retry-on-failure)
+  - `followRedirects <boolean>` do not follow redirects. On `303`, all methods except `GET`/`HEAD` become `GET` without body. On `301`/`302`, only `POST` becomes `GET`. `307`/`308` keep the method and the body.
   - `body <buffer> | <string> | <object> | <function>` body to post
   - `json <boolean>` automatically stringifies the request and parses the response. Default: false  
   - `jsonResponse <boolean>` forces JSON response parsing or not to accept mixed responses even if `json = true`. Default: same as `json`
+  - `decompress <boolean>` decompresses `gzip` (or `x-gzip`), `deflate` and `br` responses according to the `content-encoding` response header. Responses without body (`HEAD`, `204`, `205`, `304`) and `206` partial responses (a byte range of the compressed body, RFC 9110) are never decompressed. If `false`, the raw response body is returned (or piped to `output`) untouched, e.g. to download a file stored compressed with a `content-encoding` metadata. Only `false` disables it. The default `accept-encoding` request header is still sent: add `headers: { "accept-encoding": "identity" }` if the server must not compress the response on the fly. With `json: true`, a compressed response then cannot be parsed. Default: true
   - `url <string>` the destination URL
   - `method <string>` A string specifying the HTTP request method. Default: 'GET'.
-  - `headers <object>` An object containing request headers. Default: 'accept-encoding': 'gzip, deflate, br'
+  - `headers <object>` An object containing request headers. Default: 'accept-encoding': 'gzip, deflate, br'.
+    If the request has a `range` header and no `accept-encoding` header, `accept-encoding: identity` is sent (like `fetch`).
   - `timeout <number>`: A number specifying the socket timeout in milliseconds.
   - `auth <string>` Basic authentication ('user:password') to compute an Authorization header.
   - `port <number>` Port of remote server. Default: defaultPort if set, else 80.
@@ -207,9 +210,21 @@ rock(opts, function (err, res) {})
 
 ### Retry on failure
 
-By default, rock-req retries with the following errors if `maxRetry > 0`.
+By default, rock-req retries with the following errors if `maxRetry > 0`. `maxRetry` is the number of retries (`maxRetry: 2` = 3 requests max).
 
-The callback is called when the request succeed or all retries are done
+The callback is called when the request succeed or all retries are done.
+
+A request destroyed by the user (`req.destroy()`, `req.abort()`) is never retried. A request that times out is retried, so the
+callback can get `ETIMEDOUT` after `timeout * (maxRetry + 1)` plus the retry delays.
+
+All methods are retried, `POST` and `PATCH` included. To never replay a request that may have been received by the server
+(emails, payments, webhooks...), set `maxRetry: 0` on that request.
+
+**When**. The delay before the retry `n` (0 for the first retry) is `min(retryMaxDelay, d + random * d)` with `d = retryDelay * 2^n`
+(exponential backoff with jitter, never more than `retryMaxDelay`). Defaults: `retryDelay = 10` ms, `retryMaxDelay = 2000` ms.
+On `429` and `503`, a `Retry-After` header (seconds or HTTP-date, RFC 9110 §10.2.3) is respected: rock-req waits the longest of the backoff
+and `Retry-After`. If `Retry-After` is greater than `retryMaxDelay`, the request is not retried and the response is returned as is.
+An invalid `Retry-After` is ignored. Nothing is computed when the request succeeds.
 
 ```js 
 const rock = require('rock-req');
@@ -233,8 +248,12 @@ rock.defaults.retryOnError = [
   'EPIPE', /* The remote side of the stream being written has been closed. */
   'ENOTFOUND', /* Could not resolve the hostname to an IP address. */
   'ENETUNREACH', /*  No internet connection. */
+  'EHOSTUNREACH', /* No route to host. */
   'EAI_AGAIN' /* DNS lookup timed out. */
 ];
+// retryMaxDelay is not listed in rock.defaults (undefined = 2000ms), so it is not copied in each request.
+// Set it per request, with extend(), or globally:
+rock.defaults.retryMaxDelay = 2000;
 
 const opts = {
   url      : 'http://example.com',
@@ -254,9 +273,13 @@ rock.defaults = {
   headers           : { 'accept-encoding': 'gzip, deflate, br' },
   maxRedirects      : 10,
   maxRetry          : 1,
-  retryDelay        : 10, //ms
+  retryDelay        : 10, //ms, doubled on each retry, plus jitter
+  // retryMaxDelay  : 2000, //ms, not listed: undefined = 2000
+  keepAliveDuration : 3000, //ms, only with extend()
+  // keepAliveTimeout : 5000, //ms, only with extend(), not listed: undefined = 5000
+  // decompress     : true, not listed: undefined = true
   retryOnCode       : [408, 429, 502, 503, 504, 521, 522, 524 ],
-  retryOnError      : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EAI_AGAIN' ],
+  retryOnError      : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EHOSTUNREACH', 'EAI_AGAIN' ],
   // beforeRequest is called for each request, retry and redirect
   beforeRequest : (opts) => {
     // There options can be overwritted (= parsed opts.url)
@@ -268,7 +291,7 @@ rock.defaults = {
     opts.headers = {};
     opts.body = {};
     opts.method = 'POST';
-    opts.remainingRetry; 
+    opts.remainingRetry; // already decremented on a retry: `opts.remainingRetry < opts.maxRetry` means "this is a retry"
     opts.remainingRedirects;
     opts.agent = otherHttpAgent;
     
@@ -290,11 +313,17 @@ Create a new instance with specific parameters instead of modifying global `rock
 By default, this new instance inherits values of the instance source if options are not overwritten. 
 Headers are merged. Then only the first level of the options object is merged (no deep travelling in sub-objects or arrays).
 
-The `keepAliveDuration` can be changed only with `extend` method because `rock-req` creates new http Agent on new instances.
+The `keepAliveDuration` and `keepAliveTimeout` can be changed only with `extend` method because `rock-req` creates new http Agent on new instances.
+
+- `keepAliveDuration` is the initial delay of TCP keep-alive probes (`keepAliveMsecs` of NodeJS http Agent).
+- `keepAliveTimeout` (new in 5.3.0) closes a free (idle) keep-alive socket after this duration, to avoid reusing a socket already
+  closed by the server (`ECONNRESET`, `socket hang up`). Default: 5000ms, like NodeJS `http.globalAgent`. If the server sends a shorter
+  `Keep-Alive: timeout=N` header, N - 1 second is used (like NodeJS). It never aborts an in-flight request (use `timeout` for that). Set 0 to never close idle sockets (before 5.3.0).
 
 ```js
 const myInstance = rock.extend({
   keepAliveDuration : 0, // Change keep alive duration. Default to 3000ms. Set 0 to deactivate keep alive.
+  keepAliveTimeout  : 5000, // Close idle keep-alive sockets after 5000ms (default). Set 0 to never close them.
   headers: {
     'Custom-header': 'x-for-proxy'
   },

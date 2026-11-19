@@ -1,5 +1,27 @@
 # Rock-req
 
+### 5.3.0
+  - Fix: `maxRetry: N` now really means N retries on network errors (it was N - 1, so no retry at all with the default `maxRetry: 1`).
+    Retries on HTTP codes are unchanged. A request that times out is now retried once by default, so it can take up to 2× `timeout`
+    before the callback gets the error (failover to another server included).
+  - Fix: a request destroyed by the user (`req.destroy()`, `req.abort()`) is never retried. It only stops the first request:
+    once a redirect or a retry has started, destroying it has no effect (as before).
+  - Body and output functions must return a new stream on each call: they are now called again on network-error retries too.
+  - Retries wait `retryDelay * 2^n` plus a random jitter (exponential backoff), never more than the new option `retryMaxDelay`
+    (default 2000ms). `EHOSTUNREACH` added to `retryOnError`.
+  - On `429` and `503`, the `Retry-After` header (seconds or date) is respected. If it is greater than `retryMaxDelay`,
+    the response is returned without retry.
+  - New option `keepAliveTimeout` (default 5000ms like NodeJS `globalAgent`, `extend()` only): idle keep-alive sockets are closed
+    after this delay (or the server `Keep-Alive: timeout` minus 1s), to avoid `ECONNRESET` / `socket hang up` on a socket closed by
+    the server. In-flight requests are never aborted. Set 0 to keep the previous behaviour.
+  - New option `decompress` (default `true`). With `decompress: false`, a gzip/deflate/br response is returned as received.
+    Useful to download files stored compressed on S3 or Swift without altering them.
+  - Fix: `HEAD`, `204`, `205`, `304` and `206` responses are never decompressed (`206` is a range of the compressed body).
+    A request with a `range` header and no `accept-encoding` sends `accept-encoding: identity`.
+  - Fix: a `303` redirect changes all methods except `GET`/`HEAD` to `GET` without body (RFC 9110). `301`/`302`/`307`/`308` unchanged.
+  - `content-encoding: x-gzip` is decompressed like `gzip` (RFC 9110).
+  - Tests pass on Node 16 to 26 (Node >= 24.22 groups same-tick writes into one HTTP chunk, nodejs/node#64987).
+
 ### 5.2.1
   - Improved README.md for NPM.com (reduced table width)
 

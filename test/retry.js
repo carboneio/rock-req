@@ -277,6 +277,7 @@ test('should destroy and restart a new INPUT stream on retry (error on server si
 
   let nbServerTry = 0
   let nbDataChunkReceived = 0
+  let nbBytesReceived = 0
   const server = http.createServer(function (req, res) {
     nbServerTry++
     res.statusCode = 200
@@ -285,9 +286,10 @@ test('should destroy and restart a new INPUT stream on retry (error on server si
     const chunks = []
     req.on('data', (chunk) => {
       nbDataChunkReceived++
+      nbBytesReceived += chunk.length
       chunks.push(chunk.toString())
       if (nbDataChunkReceived === 1) {
-        t.equal(chunk.toString(), 'abcde')
+        t.equal(chunk.toString().slice(0, 5), 'abcde') // Node >= 24.22 sends same-tick writes in one HTTP chunk (nodejs/node#64987)
         res.socket.destroy(new Error('ECONNRESET'))
       }
     })
@@ -331,7 +333,7 @@ test('should destroy and restart a new INPUT stream on retry (error on server si
       t.equal(nbClientInputStreamCreated, 2)
       t.equal(inputStreams[0].destroyed, true)
       t.equal(inputStreams[1].destroyed, true)
-      t.equal(nbDataChunkReceived, 4)
+      t.equal(nbBytesReceived, 20) // 10 bytes per try, whatever the HTTP chunking
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), '123456789')
       server.close()
@@ -871,6 +873,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
 
   let nbServerTry = 0
   let nbDataChunkReceived = 0
+  let nbBytesReceived = 0
   const server = http.createServer(function (req, res) {
     nbServerTry++
     res.statusCode = 200
@@ -879,9 +882,10 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
     const chunks = []
     req.on('data', (chunk) => {
       nbDataChunkReceived++
+      nbBytesReceived += chunk.length
       chunks.push(chunk.toString())
       if (nbDataChunkReceived === 1) {
-        t.equal(chunk.toString(), 'abcde')
+        t.equal(chunk.toString().slice(0, 5), 'abcde') // Node >= 24.22 sends same-tick writes in one HTTP chunk (nodejs/node#64987)
         res.socket.destroy(new Error('ECONNRESET'))
       }
     })
@@ -943,7 +947,7 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
       t.equal(inputStreams[1].destroyed, true)
       t.equal(outputStreams[0].destroyed, true)
       t.equal(outputStreams[1].destroyed, true)
-      t.equal(nbDataChunkReceived, 4)
+      t.equal(nbBytesReceived, 20) // 10 bytes per try, whatever the HTTP chunking
       t.equal(res.statusCode, 200)
       t.equal(outputChunks.join(''), '123456789')
       server.close()
@@ -956,6 +960,7 @@ test('should accept using finished/cleanup function of NodeJS on OUTPUT stream o
 
   let nbServerTry = 0
   let nbDataChunkReceived = 0
+  let nbBytesReceived = 0
   const server = http.createServer(function (req, res) {
     nbServerTry++
     res.statusCode = 200
@@ -964,9 +969,10 @@ test('should accept using finished/cleanup function of NodeJS on OUTPUT stream o
     const chunks = []
     req.on('data', (chunk) => {
       nbDataChunkReceived++
+      nbBytesReceived += chunk.length
       chunks.push(chunk.toString())
       if (nbDataChunkReceived === 1) {
-        t.equal(chunk.toString(), 'abcde')
+        t.equal(chunk.toString().slice(0, 5), 'abcde') // Node >= 24.22 sends same-tick writes in one HTTP chunk (nodejs/node#64987)
         res.socket.destroy(new Error('ECONNRESET'))
       }
     })
@@ -1037,7 +1043,7 @@ test('should accept using finished/cleanup function of NodeJS on OUTPUT stream o
       t.equal(nbClientOutputFinishedStream, 2)
       t.equal(inputStreams[0].destroyed, true)
       t.equal(inputStreams[1].destroyed, true)
-      t.equal(nbDataChunkReceived, 4)
+      t.equal(nbBytesReceived, 20) // 10 bytes per try, whatever the HTTP chunking
       t.equal(res.statusCode, 200)
       t.equal(outputChunks.join(''), '123456789')
       server.close()
@@ -1050,6 +1056,7 @@ test('should accept to use stream.on(error) on Writable stream (error on server 
 
   let nbServerTry = 0
   let nbDataChunkReceived = 0
+  let nbBytesReceived = 0
   const server = http.createServer(function (req, res) {
     nbServerTry++
     res.statusCode = 200
@@ -1058,9 +1065,10 @@ test('should accept to use stream.on(error) on Writable stream (error on server 
     const chunks = []
     req.on('data', (chunk) => {
       nbDataChunkReceived++
+      nbBytesReceived += chunk.length
       chunks.push(chunk.toString())
       if (nbDataChunkReceived === 1) {
-        t.equal(chunk.toString(), 'abcde')
+        t.equal(chunk.toString().slice(0, 5), 'abcde') // Node >= 24.22 sends same-tick writes in one HTTP chunk (nodejs/node#64987)
         res.socket.destroy(new Error('ECONNRESET'))
       }
     })
@@ -1126,7 +1134,7 @@ test('should accept to use stream.on(error) on Writable stream (error on server 
       t.equal(nbClientOutputErrorStream, 1)
       t.equal(inputStreams[0].destroyed, true)
       t.equal(inputStreams[1].destroyed, true)
-      t.equal(nbDataChunkReceived, 4)
+      t.equal(nbBytesReceived, 20) // 10 bytes per try, whatever the HTTP chunking
       t.equal(res.statusCode, 200)
       t.equal(outputChunks.join(''), '123456789')
       server.close()
@@ -1185,3 +1193,213 @@ function testRetryOnHttpCode (t, httpCode, nbError) {
     })
   })
 }
+
+// retry policy
+
+function serve (handler, ready) {
+  const server = http.createServer(handler)
+  server.listen(0, () => ready('http://localhost:' + server.address().port, server))
+}
+function hangUp (req, res) { req.socket.destroy() } // the client gets ECONNRESET (socket hang up)
+
+test('maxRetry is the real number of retries on network errors (no off-by-one)', function (t) {
+  t.plan(6)
+  let nb = 0
+  serve((req, res) => { nb++; hangUp(req, res) }, (url, server) => {
+    rock({ url, maxRetry: 1, retryDelay: 1 }, function (err) {
+      t.equal(err.code, 'ECONNRESET')
+      t.equal(nb, 2, 'maxRetry 1: 1 request + 1 retry')
+      nb = 0
+      rock({ url, maxRetry: 2, retryDelay: 1 }, function (err) {
+        t.equal(err.code, 'ECONNRESET')
+        t.equal(nb, 3, 'maxRetry 2: 1 request + 2 retries')
+        nb = 0
+        rock({ url, maxRetry: 0 }, function (err) {
+          t.equal(err.code, 'ECONNRESET')
+          t.equal(nb, 1, 'maxRetry 0: no retry')
+          server.close()
+        })
+      })
+    })
+  })
+})
+
+test('beforeRequest sees remainingRetry decremented on each retry (status and network error paths)', function (t) {
+  t.plan(8)
+  let nb = 0
+  const seen = []
+  const myRock = rock.extend({
+    maxRetry: 2,
+    retryDelay: 1,
+    beforeRequest: (opts) => { seen.push([opts.remainingRetry < opts.maxRetry, opts.remainingRetry, opts.prevError?.code, opts.prevStatusCode]); return opts }
+  })
+  serve((req, res) => {
+    nb++
+    if (req.url === '/status') { res.statusCode = nb < 3 ? 503 : 200; return res.end('ok') }
+    if (nb < 3) return hangUp(req, res)
+    res.end('ok')
+  }, (url, server) => {
+    myRock(url + '/status', function (err, res, data) {
+      t.error(err)
+      t.equal(data.toString(), 'ok')
+      t.deepEqual(seen, [[false, 2, undefined, undefined], [true, 1, undefined, 503], [true, 0, undefined, 503]])
+      nb = 0; seen.length = 0
+      myRock(url + '/error', function (err, res, data) {
+        t.error(err)
+        t.equal(data.toString(), 'ok')
+        t.deepEqual(seen.map(s => s.slice(0, 3)), [[false, 2, undefined], [true, 1, 'ECONNRESET'], [true, 0, 'ECONNRESET']])
+        t.equal(nb, 3)
+        t.equal(seen.length, 3)
+        server.close()
+      })
+    })
+  })
+})
+
+test('POST and PATCH are retried by default on retryOnCode, ECONNRESET and timeout (like 5.x)', function (t) {
+  t.plan(7)
+  let nb = 0
+  serve((req, res) => {
+    nb++
+    if (req.url === '/503') { res.statusCode = 503; return res.end('busy') }
+    if (req.url === '/reset') return hangUp(req, res)
+    setTimeout(() => res.end('late'), 300)
+  }, (url, server) => {
+    rock({ url: url + '/503', method: 'POST', body: 'a', maxRetry: 2, retryDelay: 1 }, function (err, res) {
+      t.error(err)
+      t.equal(res.statusCode, 503)
+      t.equal(nb, 3)
+      nb = 0
+      rock.post({ url: url + '/reset', retryDelay: 1 }, 'a', function (err) {
+        t.equal(err.code, 'ECONNRESET')
+        t.equal(nb, 2, 'default maxRetry 1: 1 request + 1 retry')
+        nb = 0
+        rock.patch({ url: url + '/slow', maxRetry: 1, retryDelay: 1, timeout: 50 }, 'a', function (err) {
+          t.equal(err.code, 'ETIMEDOUT')
+          t.equal(nb, 2)
+          server.close()
+        })
+      })
+    })
+  })
+})
+
+test('exponential backoff with jitter, capped by retryMaxDelay', function (t) {
+  t.plan(6)
+  const hits = []
+  serve((req, res) => { hits.push(Date.now()); res.statusCode = 503; res.end() }, (url, server) => {
+    rock({ url, maxRetry: 4, retryDelay: 20, retryMaxDelay: 70 }, function (err, res) {
+      t.error(err)
+      t.equal(hits.length, 5)
+      const gaps = hits.slice(1).map((h, i) => h - hits[i])
+      // delays: [20,40) then [40,70] then 70 (capped) then 70 (capped)
+      t.ok(gaps[0] >= 19 && gaps[0] < 400, 'first retry ' + gaps[0])
+      t.ok(gaps[1] >= 39 && gaps[1] < 400, 'second retry ' + gaps[1])
+      t.ok(gaps[2] >= 69 && gaps[3] >= 69 && gaps[2] < 400 && gaps[3] < 400, 'capped ' + gaps.slice(2))
+      const start = Date.now()
+      rock({ url, maxRetry: 2, retryDelay: 10000, retryMaxDelay: 30 }, function () {
+        t.ok(Date.now() - start < 1000, 'retryMaxDelay caps a large retryDelay')
+        server.close()
+      })
+    })
+  })
+})
+
+test('Retry-After (seconds or HTTP-date) on 429/503 is respected, ignored if invalid, no retry if > retryMaxDelay', function (t) {
+  t.plan(14)
+  let hits = []
+  let retryAfter = ''
+  let status = 503
+  serve((req, res) => {
+    hits.push(Date.now())
+    res.statusCode = hits.length === 1 ? status : 200
+    if (hits.length === 1) res.setHeader('retry-after', retryAfter)
+    res.end('body' + hits.length)
+  }, (url, server) => {
+    retryAfter = '1'
+    rock({ url, maxRetry: 1, retryDelay: 1 }, function (err, res, data) {
+      t.error(err)
+      t.equal(data.toString(), 'body2')
+      t.ok(hits[1] - hits[0] >= 990, 'waits Retry-After seconds ' + (hits[1] - hits[0]))
+      hits = []; retryAfter = new Date(Date.now() + 1500).toUTCString(); status = 429
+      rock({ url, maxRetry: 1, retryDelay: 1 }, function (err, res, data) {
+        t.error(err)
+        t.equal(data.toString(), 'body2')
+        t.ok(hits[1] - hits[0] >= 400, 'waits Retry-After HTTP-date ' + (hits[1] - hits[0]))
+        hits = []; retryAfter = '5'; status = 503
+        rock({ url, maxRetry: 1, retryDelay: 1, retryMaxDelay: 2000 }, function (err, res, data) {
+          t.error(err)
+          t.equal(res.statusCode, 503, 'Retry-After > retryMaxDelay: response returned as is')
+          t.equal(data.toString(), 'body1')
+          hits = []; retryAfter = 'soon'
+          rock({ url, maxRetry: 1, retryDelay: 1 }, function (err, res, data) {
+            t.error(err)
+            t.equal(data.toString(), 'body2', 'invalid Retry-After ignored')
+            t.ok(hits[1] - hits[0] < 500, 'no wait ' + (hits[1] - hits[0]))
+            hits = []; retryAfter = '5'; status = 502
+            rock({ url, maxRetry: 1, retryDelay: 1 }, function (err, res, data) {
+              t.error(err)
+              t.equal(data.toString(), 'body2', 'Retry-After only read on 429/503')
+              server.close()
+            })
+          })
+        })
+      })
+    })
+  })
+})
+
+test('a request destroyed by the user (abort) is not retried, before or during the response', function (t) {
+  t.plan(10)
+  let nb = 0
+  serve((req, res) => {
+    nb++
+    if (req.url === '/body') { res.write('partial'); return }
+    setTimeout(() => res.end('late'), 300)
+  }, (url, server) => {
+    let nbOutput = 0
+    let nbCb = 0
+    const output = () => { nbOutput++; return new Writable({ write (c, e, cb) { cb() } }) }
+    const req = rock({ url, maxRetry: 2, retryDelay: 1, output }, function (err, res) {
+      nbCb++
+      t.equal(err?.code, 'ECONNRESET')
+      t.equal(res, undefined)
+      t.equal(nb, 1, 'no second request')
+      t.equal(nbOutput, 0)
+      nb = 0
+      const req2 = rock({ url: url + '/body', maxRetry: 2, retryDelay: 1, output: (o, res) => { setTimeout(() => req2.abort(), 20); return output() } }, function (err) {
+        nbCb++
+        t.ok(err, 'aborted during the response')
+        t.equal(nb, 1, 'no second request')
+        t.equal(nbOutput, 1, 'output function called once')
+        setTimeout(() => {
+          t.equal(nbCb, 2, 'callback called once per request')
+          t.equal(nb, 1)
+          t.equal(req.destroyed && req2.destroyed, true)
+          server.close()
+          server.closeAllConnections?.()
+        }, 100)
+      })
+    })
+    setTimeout(() => req.destroy(), 50)
+  })
+})
+
+test('a response cut by the server (FIN or RST mid-body) is still retried', function (t) {
+  t.plan(4)
+  let nb = 0
+  serve((req, res) => {
+    nb++
+    if (nb === 1) { res.write('partial'); return setTimeout(() => req.socket.destroy(), 20) }
+    if (nb === 2) { res.write('partial'); return setTimeout(() => req.socket.resetAndDestroy ? req.socket.resetAndDestroy() : req.socket.destroy(), 20) }
+    res.end('ok')
+  }, (url, server) => {
+    rock({ url, maxRetry: 2, retryDelay: 1 }, function (err, res, data) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(data.toString(), 'ok')
+      t.equal(nb, 3)
+      server.close()
+    })
+  })
+})
