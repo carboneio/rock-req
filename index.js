@@ -43,6 +43,7 @@ function extend (defaultOptions = {}) {
   defaultOptions.headers = applyDefault(cloneLowerCase(defaultOptions.headers), _default.headers)
   _default = applyDefault(defaultOptions, _default) // inherits of parent options
   const idleTimeout = Number(_default.keepAliveTimeout ?? 5000) // ms, like Node's globalAgent. Like decompress (true), not in defaults: not copied in each request (faster)
+  const sensitiveHeaders = _default.sensitiveHeaders ?? ['authorization', 'cookie', 'proxy-authorization', 'x-auth-token'] // dropped on redirect to another host or from https to http
   const agents = [http, https].map(h => {
     if (!(_default.keepAliveDuration > 0)) return undefined
     class RockAgent extends h.Agent {
@@ -65,7 +66,11 @@ function extend (defaultOptions = {}) {
 
   function retry (opts, cb, wait = 0) { // failure only: retryDelay * 2^n + jitter, capped by retryMaxDelay, at least Retry-After
     const d = opts.retryDelay * 2 ** (opts.maxRetry - opts.remainingRetry - 1)
-    setTimeout(rock, Math.max(wait, Math.min(opts.retryMaxDelay ?? 2000, d + Math.random() * d)), opts, cb)
+    setTimeout(next, Math.max(wait, Math.min(opts.retryMaxDelay ?? 2000, d + Math.random() * d)), opts, cb)
+  }
+  function next (opts, cb) { // retry or redirect: called from an event handler, so an invalid request (bad location, port...) must not throw
+    let called = false
+    try { rock(opts, (err, res, data) => { called = true; return cb(err, res, data) }) } catch (e) { if (called) throw e; cb(e) } // an exception of the caller's callback is not swallowed, never a second call
   }
 
   function rock (opts, directBody, cb) {
@@ -151,14 +156,14 @@ function extend (defaultOptions = {}) {
         res.resume() // Discard response, consume data until the end to free up memory. Mandatory!
         delete opts.headers.host // Discard `host` header on redirect (see #32)
         opts.url = res.headers.location
-        const redirectTo = url.parse(opts.url) // eslint-disable-line node/no-deprecated-api
+        let redirectTo
+        try { redirectTo = url.parse(opts.url) } catch (e) { return cb(e) } // eslint-disable-line node/no-deprecated-api
         if (redirectTo.hostname === null) { // relative redirect
           opts.url = null
           Object.assign(opts, originalRequest)
           opts.path = redirectTo.path
-        } else if (redirectTo.hostname !== originalRequest.hostname) { // If redirected host is different than original host, drop headers to prevent cookie leak (#73)
-          delete opts.headers.cookie
-          delete opts.headers.authorization
+        } else if (redirectTo.hostname !== originalRequest.hostname || (redirectTo.protocol === 'http:' && originalRequest.protocol === 'https:')) {
+          for (const h of sensitiveHeaders) delete opts.headers[h] // other host or https to http: drop credentials (#73). The body of a 307/308 is still sent
         }
         if ((opts.method === 'POST' && [301, 302].includes(res.statusCode)) || (res.statusCode === 303 && opts.method && opts.method !== 'GET' && opts.method !== 'HEAD')) {
           opts.method = 'GET' // On 301/302 redirect, change POST to GET (see #35). On 303, change all methods except HEAD to GET (RFC 9110)
@@ -168,7 +173,7 @@ function extend (defaultOptions = {}) {
           requestAbortedOrEnded = false
           return onRequestEnd(new Error('too many redirects'))
         }
-        return rock(opts, cb)
+        return next(opts, cb)
       }
       // or read response and leave at the end
       response = res

@@ -439,3 +439,155 @@ test('303 redirect changes a JSON POST with a stream body to GET', function (t) 
     })
   })
 })
+
+;['ftp://x/', 'http://localhost:99999/', 'http://[::1/x'].forEach(function (location) {
+  test('invalid redirect location ' + location + ' returns an error in the callback, without crashing', function (t) {
+    t.plan(2)
+    const server = http.createServer(function (req, res) {
+      res.statusCode = 302
+      res.setHeader('Location', location)
+      res.end()
+    })
+    server.listen(0, function () {
+      rock('http://localhost:' + server.address().port + '/', function (err) {
+        t.ok(err instanceof Error, err && err.code)
+        setTimeout(function () { t.pass('callback called once'); server.close() }, 50)
+      })
+    })
+  })
+})
+
+test('an invalid retry returns an error in the callback, without crashing', function (t) {
+  t.plan(2)
+  let nb = 0
+  const server = http.createServer(function (req, res) {
+    res.statusCode = 503
+    res.end()
+  })
+  server.listen(0, function () {
+    rock({
+      url: 'http://localhost:' + server.address().port + '/',
+      beforeRequest: function (opts) { if (nb++ === 1) opts.port = 99999; return opts }
+    }, function (err) {
+      t.equal(err.code, 'ERR_SOCKET_BAD_PORT')
+      setTimeout(function () { t.pass('callback called once'); server.close() }, 50)
+    })
+  })
+})
+
+test('an invalid initial request still throws synchronously (unchanged, like http.request)', function (t) {
+  t.plan(3)
+  t.throws(function () { rock('ftp://x/', function () { t.fail() }) }, { code: 'ERR_INVALID_PROTOCOL' })
+  t.throws(function () { rock('http://localhost:99999/', function () { t.fail() }) }, { code: 'ERR_SOCKET_BAD_PORT' })
+  t.throws(function () { rock({ url: 'http://localhost:1/', headers: { a: 'x\r\nb: y' } }, function () { t.fail() }) }, { code: 'ERR_INVALID_CHAR' })
+})
+
+const credentials = { authorization: 'Bearer a', cookie: 'c=1', 'proxy-authorization': 'Basic b', 'X-Auth-Token': 'swift', 'x-custom': 'kept' }
+function credentialsOf (req) {
+  const h = req.headers
+  return [h.authorization, h.cookie, h['proxy-authorization'], h['x-auth-token'], h['x-custom']].join()
+}
+
+function startTarget (cb) {
+  const target = http.createServer(function (req, res) {
+    let body = ''
+    req.on('data', function (chunk) { body += chunk })
+    req.on('end', function () { res.end(JSON.stringify({ method: req.method, body, credentials: credentialsOf(req) })) })
+  })
+  target.listen(0, function () { cb(target, target.address().port) })
+}
+
+test('redirect to another host drops credentials headers', function (t) {
+  t.plan(3)
+  startTarget(function (target, targetPort) {
+    const server = http.createServer(function (req, res) {
+      t.equal(credentialsOf(req), 'Bearer a,c=1,Basic b,swift,kept')
+      res.statusCode = 302
+      res.setHeader('Location', 'http://127.0.0.1:' + targetPort + '/')
+      res.end()
+    })
+    server.listen(0, function () {
+      rock({ url: 'http://localhost:' + server.address().port + '/', headers: credentials }, function (err, res, data) {
+        t.error(err)
+        t.equal(JSON.parse(data).credentials, ',,,,kept')
+        server.close(); target.close()
+      })
+    })
+  })
+})
+
+test('redirect to the same host keeps credentials headers (unchanged)', function (t) {
+  t.plan(2)
+  startTarget(function (target, targetPort) {
+    const server = http.createServer(function (req, res) {
+      res.statusCode = 302
+      res.setHeader('Location', 'http://localhost:' + targetPort + '/')
+      res.end()
+    })
+    server.listen(0, function () {
+      rock({ url: 'http://localhost:' + server.address().port + '/', headers: credentials }, function (err, res, data) {
+        t.error(err)
+        t.equal(JSON.parse(data).credentials, 'Bearer a,c=1,Basic b,swift,kept')
+        server.close(); target.close()
+      })
+    })
+  })
+})
+
+test('redirect from https to http on the same host drops credentials headers', function (t) {
+  t.plan(2)
+  startTarget(function (target, targetPort) {
+    const server = selfSignedHttps(function (req, res) {
+      res.statusCode = 302
+      res.setHeader('Location', 'http://localhost:' + targetPort + '/')
+      res.end()
+    })
+    server.listen(0, function () {
+      rock({ url: 'https://localhost:' + server.address().port + '/', headers: credentials, rejectUnauthorized: false }, function (err, res, data) {
+        t.error(err)
+        t.equal(JSON.parse(data).credentials, ',,,,kept')
+        server.close(); target.close()
+      })
+    })
+  })
+})
+
+;[307, 308].forEach(function (statusCode) {
+  test(statusCode + ' redirect to another host keeps the method and the body, but drops credentials headers', function (t) {
+    t.plan(2)
+    startTarget(function (target, targetPort) {
+      const server = http.createServer(function (req, res) {
+        req.resume()
+        res.statusCode = statusCode
+        res.setHeader('Location', 'http://127.0.0.1:' + targetPort + '/')
+        res.end()
+      })
+      server.listen(0, function () {
+        rock({ url: 'http://localhost:' + server.address().port + '/', method: 'POST', body: 'payload', headers: credentials }, function (err, res, data) {
+          t.error(err)
+          t.deepEqual(JSON.parse(data), { method: 'POST', body: 'payload', credentials: ',,,,kept' })
+          server.close(); target.close()
+        })
+      })
+    })
+  })
+})
+
+test('sensitiveHeaders can be changed with extend', function (t) {
+  t.plan(2)
+  const rockCustom = rock.extend({ sensitiveHeaders: ['x-custom'] })
+  startTarget(function (target, targetPort) {
+    const server = http.createServer(function (req, res) {
+      res.statusCode = 302
+      res.setHeader('Location', 'http://127.0.0.1:' + targetPort + '/')
+      res.end()
+    })
+    server.listen(0, function () {
+      rockCustom({ url: 'http://localhost:' + server.address().port + '/', headers: credentials }, function (err, res, data) {
+        t.error(err)
+        t.equal(JSON.parse(data).credentials, 'Bearer a,c=1,Basic b,swift,')
+        server.close(); target.close()
+      })
+    })
+  })
+})

@@ -1,5 +1,13 @@
 # Rock-req
 
+### 5.3.1
+  - Security fix: an invalid redirect (`Location: ftp://x`, a bad port or a malformed URL) crashed the process with an uncaught exception.
+    It now returns the error in the callback. Same for a retry that becomes invalid (e.g. changed by `beforeRequest`).
+    An invalid first request still throws synchronously, like NodeJS `http.request`.
+  - Security fix: on a redirect to another host, or from `https` to `http`, `proxy-authorization` and `x-auth-token` (OpenStack Swift) are now
+    removed too, like `authorization` and `cookie`. The list can be changed with `extend({ sensitiveHeaders: [...] })`.
+    A `307`/`308` still sends the body to the new location: use `followRedirects: false` for a request whose body contains secrets.
+
 ### 5.3.0
   - Fix: `maxRetry: N` now really means N retries on network errors (it was N - 1, so no retry at all with the default `maxRetry: 1`).
     Retries on HTTP codes are unchanged. A request that times out is now retried once by default, so it can take up to 2× `timeout`

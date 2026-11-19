@@ -119,12 +119,18 @@ const opts = {
 rock(opts, function (err, res, data) {} )
 ```
 
+Like NodeJS `http.request`, an invalid first request (unsupported protocol, bad port, invalid header character) throws synchronously.
+Errors happening later (network, redirects, retries) are always returned in the callback.
+
 **opts** can contain any value of NodeJS http.request with rock-req parameters. Here are the most used one:
 
   - `maxRedirects <number>`overwrite global maximum number of redirects. Defaults to 10
   - `maxRetry <number>` overwrite global maximum number of retries. Defaults to 1
   - `retryDelay <number>`, `retryMaxDelay <number>`, `retryOnCode <number[]>`, `retryOnError <string[]>` see [Retry on failure](#retry-on-failure)
   - `followRedirects <boolean>` do not follow redirects. On `303`, all methods except `GET`/`HEAD` become `GET` without body. On `301`/`302`, only `POST` becomes `GET`. `307`/`308` keep the method and the body.
+    On a redirect to another host, or from `https` to `http`, the `sensitiveHeaders` (`authorization`, `cookie`, `proxy-authorization`, `x-auth-token`) are removed.
+    The body of a `307`/`308` is still sent: use `followRedirects: false` for a request whose body contains secrets.
+    An invalid redirect (bad `Location` URL, protocol or port) returns an error in the callback.
   - `body <buffer> | <string> | <object> | <function>` body to post
   - `json <boolean>` automatically stringifies the request and parses the response. Default: false  
   - `jsonResponse <boolean>` forces JSON response parsing or not to accept mixed responses even if `json = true`. Default: same as `json`
@@ -277,6 +283,7 @@ rock.defaults = {
   // retryMaxDelay  : 2000, //ms, not listed: undefined = 2000
   keepAliveDuration : 3000, //ms, only with extend()
   // keepAliveTimeout : 5000, //ms, only with extend(), not listed: undefined = 5000
+  // sensitiveHeaders : ['authorization', 'cookie', 'proxy-authorization', 'x-auth-token'], lowercase, only with extend(), not listed
   // decompress     : true, not listed: undefined = true
   retryOnCode       : [408, 429, 502, 503, 504, 521, 522, 524 ],
   retryOnError      : ['ETIMEDOUT', 'ECONNRESET', 'EADDRINUSE', 'ECONNREFUSED','EPIPE', 'ENOTFOUND', 'ENETUNREACH', 'EHOSTUNREACH', 'EAI_AGAIN' ],
