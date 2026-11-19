@@ -7,11 +7,34 @@ on:
 
 permissions:
   contents: read
-  id-token: write # required for npm trusted publishing (OIDC) + provenance
 
 jobs:
+  test:
+    strategy:
+      fail-fast: true
+      matrix:
+        # same matrix as ci.yml: publish only if every combination passes
+        include:
+          - { os: ubuntu-latest, node: 16 }
+          - { os: ubuntu-latest, node: 26 }
+          - { os: macos-latest, node: 26 }
+          - { os: windows-latest, node: 26 }
+    name: Test Node ${{ matrix.node }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npm test
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm trusted publishing (OIDC) + provenance
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +49,4 @@ jobs:
             exit 1
           fi
       - run: npm install -g npm@latest # trusted publishing needs npm >= 11.5.1
-      - run: npm install
-      - run: npm test
       - run: npm publish --provenance --access public
