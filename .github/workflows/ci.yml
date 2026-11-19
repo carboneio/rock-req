@@ -9,8 +9,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        node: [16.16.0, 18.5.0, 18.20.4, 20.18.0, 22.21.1, 24.11.1, 25.2.0]
+        # oldest supported (engines >=16) and latest Node on Linux, latest on macOS and Windows
+        include:
+          - { os: ubuntu-latest, node: 16 }
+          - { os: ubuntu-latest, node: 26 }
+          - { os: macos-latest, node: 26 }
+          - { os: windows-latest, node: 26 }
     name: Node ${{ matrix.node }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     steps:
