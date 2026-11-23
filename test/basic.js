@@ -12,9 +12,9 @@ test('simple get', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock('http://localhost:' + port + '/path', function (err, res, data) {
+    rock('http://127.0.0.1:' + port + '/path', function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -32,10 +32,10 @@ test('https', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'https://localhost:' + port + '/path',
+      url: 'https://127.0.0.1:' + port + '/path',
       rejectUnauthorized: false
     }, function (err, res, data) {
       t.error(err)
@@ -56,10 +56,10 @@ test('simple get json', function (t) {
     res.end('{"message":"response"}')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       json: true
     }
     rock(opts, function (err, res, data) {
@@ -84,11 +84,11 @@ test('HEAD request', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       method: 'HEAD',
-      url: 'http://localhost:' + port
+      url: 'http://127.0.0.1:' + port
     }
     rock.head(opts, function (err, res) {
       t.error(err)
@@ -109,10 +109,10 @@ test('timeout option', function (t) {
     }, 2000)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       timeout: 1000,
       maxRetry: 0
     }, function (err, res) {
@@ -135,10 +135,10 @@ test('should not timeout even if keepAliveDuration is lower than response time',
 
   const _newRock = rock.extend({keepAliveDuration : 1000});
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     _newRock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       maxRetry: 0
     }, function (err, res, data) {
       t.error(err)
@@ -170,12 +170,12 @@ test('rewrite POST redirects to GET', function (t) {
   })
   server.setTimeout(1000) // NodeJS < 19 does not close keep-alive socket automatically
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       method: 'POST',
       body: '123',
-      url: 'http://localhost:' + port
+      url: 'http://127.0.0.1:' + port
     }
     rock(opts, function (err, res, data) {
       t.error(err)
@@ -195,9 +195,9 @@ test('simple get hostname + url', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock({ host: 'localhost', port, url: '/path' }, function (err, res, data) {
+    rock({ host: '127.0.0.1', port, url: '/path' }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')

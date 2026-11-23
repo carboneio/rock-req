@@ -187,11 +187,13 @@ Alternative syntax:
 
 ### Output Stream
 
-Rock-req requires that output stream is initialized in a function.
+`output` must be a function returning a new Writable stream. Rock-req calls it on each attempt, so a retry writes into a fresh stream (a new file in the example below).
 
-This function is invoked by rock-req for every request retry.
+If something goes wrong, rock-req destroys the stream for you. Listen to its `'error'` event if you need to clean up (optional).
 
-If something goes wrong, the Writable stream is destroyed automatically and the error can be captured with `'error'` event or `stream.finished` (optional).
+If `output()` returns a stream already destroyed, such as the same destination reused after a failed attempt, the request stops and the callback gets the error instead of retrying.
+
+The callback is called once the output stream is closed (on `'finish'` if it is created with `emitClose: false`).
 
 ```js
 const rock = require('rock-req')
@@ -219,6 +221,8 @@ rock(opts, function (err, res) {})
 By default, rock-req retries with the following errors if `maxRetry > 0`. `maxRetry` is the number of retries (`maxRetry: 2` = 3 requests max).
 
 The callback is called when the request succeed or all retries are done.
+
+A `101 Switching Protocols` answer to a request without its own `'upgrade'` listener ends with the error `EUNEXPECTEDUPGRADE` and is not retried.
 
 A request destroyed by the user (`req.destroy()`, `req.abort()`) is never retried. A request that times out is retried, so the
 callback can get `ETIMEDOUT` after `timeout * (maxRetry + 1)` plus the retry delays.

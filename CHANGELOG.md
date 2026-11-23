@@ -1,5 +1,11 @@
 # Rock-req
 
+### 5.3.2
+  - Fix: the callback never fired when `output()` returned the same stream on every retry. After a network error, the retry wrote into the stream destroyed by the failed attempt and waited forever. Now, if `output()` returns a destroyed stream, the request stops right away and the callback gets the error. Returning a new stream on each call, as documented, still works as before.
+  - Fix: the callback never fired when the output stream was created with `emitClose: false`. It now fires on `finish`.
+  - Fix: the callback never fired when a server answered `101 Switching Protocols` to a normal request, even with a `timeout`. You now get an `EUNEXPECTEDUPGRADE` error, which is not retried. If you listen to `req.on('upgrade')` yourself, you still get the socket.
+  - Fix: a synchronous `req.abort()` now calls the callback with a `socket hang up` error (`ECONNRESET`). Before, the callback was never called.
+
 ### 5.3.1
   - Security fix: an invalid redirect (`Location: ftp://x`, a bad port or a malformed URL) crashed the process with an uncaught exception.
     It now returns the error in the callback. Same for a retry that becomes invalid (e.g. changed by `beforeRequest`).

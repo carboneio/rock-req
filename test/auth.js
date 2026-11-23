@@ -11,9 +11,9 @@ test('basic auth', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock('http://foo:bar@localhost:' + port, function (err, res, data) {
+    rock('http://foo:bar@127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -31,9 +31,9 @@ test('basic auth + host', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock({ auth: 'foo:bar', host: 'localhost', port }, function (err, res, data) {
+    rock({ auth: 'foo:bar', host: '127.0.0.1', port }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -51,9 +51,9 @@ test('basic auth + hostname', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock({ auth: 'foo:bar', hostname: 'localhost', port }, function (err, res, data) {
+    rock({ auth: 'foo:bar', hostname: '127.0.0.1', port }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')

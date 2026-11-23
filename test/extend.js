@@ -29,10 +29,10 @@ test('create new instance, merge with request header, should lower case headers'
       'Second-Header': '12' // and should lower case
     }
   })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock.concat({
-      url: 'http://localhost:' + port + '/origin',
+      url: 'http://127.0.0.1:' + port + '/origin',
       headers: {
         'custom-header': 'custom-value'
       }
@@ -40,7 +40,7 @@ test('create new instance, merge with request header, should lower case headers'
       t.error(err)
       t.equal(data.toString(), 'origin')
       newInstance.concat({
-        url: 'http://localhost:' + port + '/instance',
+        url: 'http://127.0.0.1:' + port + '/instance',
         headers: {
           'custom-Header': 'custom-value'
         }
@@ -85,7 +85,7 @@ test('beforeRequest handler, combined with retries', function (t) {
     beforeRequest: (parsedOpts) => {
       t.equal(parsedOpts.maxRedirects, 10)
       t.equal(parsedOpts.maxRetry, 2)
-      t.equal(parsedOpts.hostname, 'localhost')
+      t.equal(parsedOpts.hostname, '127.0.0.1')
       t.equal(parsedOpts.protocol, 'http:')
       if (parsedOpts.path === '/first' && parsedOpts.maxRetry === parsedOpts.remainingRetry) {
         parsedOpts.path = '/first-rewrite' + parsedOpts.remainingRetry
@@ -102,15 +102,15 @@ test('beforeRequest handler, combined with retries', function (t) {
     }
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     // test with opts as a string
-    newInstance.concat('http://localhost:' + port + '/first', function (err, res, data) {
+    newInstance.concat('http://127.0.0.1:' + port + '/first', function (err, res, data) {
       t.error(err)
       t.equal(data.toString(), 'first-rewrite1')
       // test with opts as a object
       newInstance.concat({
-        url: 'http://localhost:' + port + '/second',
+        url: 'http://127.0.0.1:' + port + '/second',
         headers: {
           'second-header': 'second-header-overwritten'
         }
@@ -132,7 +132,7 @@ test('beforeRequest handler, combined with redirect with absolute URL, and switc
   const httpServer = http.createServer(function (req, res) {
     t.equal(req.url, '/path1')
     res.statusCode = 301
-    res.setHeader('Location', 'https://localhost:' + httpsPort + '/path2')
+    res.setHeader('Location', 'https://127.0.0.1:' + httpsPort + '/path2')
     res.end()
   })
 
@@ -148,13 +148,13 @@ test('beforeRequest handler, combined with redirect with absolute URL, and switc
     beforeRequest: (parsedOpts) => {
       t.equal(parsedOpts.maxRedirects, 5)
       if (parsedOpts.remainingRedirects === 5) {
-        t.equal(parsedOpts.hostname, 'localhost')
+        t.equal(parsedOpts.hostname, '127.0.0.1')
         t.equal(parsedOpts.path, '/before')
         t.equal(parsedOpts.protocol, 'http:')
         parsedOpts.path = '/path1'
       }
       if (parsedOpts.remainingRedirects === 4) {
-        t.equal(parsedOpts.hostname, 'localhost')
+        t.equal(parsedOpts.hostname, '127.0.0.1')
         t.equal(parsedOpts.path, '/path2')
         t.equal(parsedOpts.protocol, 'https:')
       }
@@ -162,12 +162,12 @@ test('beforeRequest handler, combined with redirect with absolute URL, and switc
     }
   })
 
-  httpServer.listen(0, function () {
+  httpServer.listen(0, '127.0.0.1', function () {
     httpPort = httpServer.address().port
-    httpsServer.listen(0, function () {
+    httpsServer.listen(0, '127.0.0.1', function () {
       httpsPort = httpsServer.address().port
       newInstance({
-        url: 'http://localhost:' + httpPort + '/before',
+        url: 'http://127.0.0.1:' + httpPort + '/before',
         rejectUnauthorized: false
       }, function (err, res, data) {
         t.error(err)
@@ -203,23 +203,23 @@ test('beforeRequest handler, combined with redirect with relative URL', function
     beforeRequest: (parsedOpts) => {
       t.equal(parsedOpts.maxRedirects, 5)
       if (parsedOpts.remainingRedirects === 5) {
-        t.equal(parsedOpts.hostname, 'localhost')
+        t.equal(parsedOpts.hostname, '127.0.0.1')
         t.equal(parsedOpts.path, '/before')
         t.equal(parsedOpts.protocol, 'http:')
         parsedOpts.path = '/path1'
       }
       if (parsedOpts.remainingRedirects === 4) {
-        t.equal(parsedOpts.hostname, 'localhost')
+        t.equal(parsedOpts.hostname, '127.0.0.1')
         t.equal(parsedOpts.path, '/path2')
       }
       return parsedOpts
     }
   })
 
-  httpServer.listen(0, function () {
+  httpServer.listen(0, '127.0.0.1', function () {
     httpPort = httpServer.address().port
     newInstance({
-      url: 'http://localhost:' + httpPort + '/before',
+      url: 'http://127.0.0.1:' + httpPort + '/before',
       rejectUnauthorized: false
     }, function (err, res, data) {
       t.error(err)
@@ -262,12 +262,12 @@ test('beforeRequest handler, combined with redirect with relative URL and rewrit
         t.equal(parsedOpts.hostname, 'example.com')
         t.equal(parsedOpts.path, '/path2')
       }
-      parsedOpts.hostname = 'localhost'
+      parsedOpts.hostname = '127.0.0.1'
       return parsedOpts
     }
   })
 
-  httpServer.listen(0, function () {
+  httpServer.listen(0, '127.0.0.1', function () {
     httpPort = httpServer.address().port
     newInstance({
       url: 'http://example.com:' + httpPort + '/before',

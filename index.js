@@ -139,6 +139,7 @@ function extend (defaultOptions = {}) {
         if (stream.readableEnded === false || stream.writableEnded === false) return onRequestEnd(new Error('ERR_STREAM_PREMATURE_CLOSE'))
         if (isLast === true) return onRequestEnd()
       })
+      if (isLast === true && stream._writableState?.emitClose === false) stream.once('finish', () => onRequestEnd()) // emitClose: false, never a 'close'
       return stream
     }
     const req = protocol.request(opts, res => {
@@ -180,18 +181,31 @@ function extend (defaultOptions = {}) {
       const status = res.statusCode // no body (HEAD, 204, 205, 304. Node never gives 1xx here) or a range of the compressed body (206): never decompress
       const contentEncoding = opts.decompress !== false && opts.method !== 'HEAD' && status !== 204 && status !== 205 && status !== 206 && status !== 304 ? (res.headers['content-encoding'] || '').toLowerCase() : ''
       const output = opts.output ? opts.output(opts, res) : new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } })
+      if (output.destroyed === true) { // the same destination as a previous attempt (destroyed on its error) or a stream closed by the caller: never piped, it would never emit 'close'
+        requestAbortedOrEnded = true
+        output.on('error', () => {}) // its pending 'error' event is the error returned below
+        streamToCleanOnError.forEach(s => s.destroy()) // the request and a streamed body still uploading, as on any error
+        res.destroy()
+        return cb(output._writableState?.errored ?? opts.prevError ?? new Error('opts.output returned a destroyed stream')) // _writableState: Node 16 has no output.errored
+      }
+      let source = listen(res)
       switch (contentEncoding) {
         case 'br':
-          listen(res).pipe(listen(zlib.createBrotliDecompress())).pipe(listen(output, true)); break
+          source = source.pipe(listen(zlib.createBrotliDecompress())); break
         case 'gzip':
         case 'x-gzip':
         case 'deflate':
-          listen(res).pipe(listen(zlib.createUnzip())).pipe(listen(output, true)); break
-        default:
-          listen(res).pipe(listen(output, true)); break
+          source = source.pipe(listen(zlib.createUnzip())); break
       }
+      source.pipe(listen(output, true))
     })
     req.destroy = abort
+    req.once('upgrade', (res, socket) => { // a 101 to a normal request: Node would destroy the socket silently, without response nor error
+      if (req.listenerCount('upgrade') > 0) { requestAbortedOrEnded = true; return } // the caller handles the upgrade itself (as before)
+      socket.destroy()
+      onRequestEnd(Object.assign(new Error(`Unexpected ${res.statusCode} upgrade response`), { code: 'EUNEXPECTEDUPGRADE' }))
+    })
+    req.once('close', () => { if (response === null && req.method !== 'CONNECT') onRequestEnd(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })) }) // closed without response nor error: never a lost callback. A CONNECT tunnel is handled by the caller ('connect' event)
     req.once('timeout', () => {
       const _error = new Error('TimeoutError'); _error.code = 'ETIMEDOUT'
       destroy.call(req, _error) // we must destroy manually and send the error to the error listener to call onRequestEnd. Not a user abort: retried

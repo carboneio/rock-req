@@ -1,7 +1,7 @@
 const rock = require('../')
 const http = require('http')
 const test = require('tape')
-const { Writable, Readable, finished } = require('stream')
+const { Writable, Readable, PassThrough, finished } = require('stream')
 
 test('should retry if there is socket errors', function (t) {
   t.plan(4 * 8)
@@ -36,10 +36,10 @@ test('should not retry if maxRetry === 0', function (t) {
     res.statusCode = 502
     res.end('response')
   })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       maxRetry: 0,
       retryOnCode: [502]
     }, function (err, res, data) {
@@ -58,10 +58,10 @@ test('should not retry if maxRetry < 0', function (t) {
     res.statusCode = 502
     res.end('response')
   })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       maxRetry: -1,
       retryOnCode: [502]
     }, function (err, res, data) {
@@ -82,10 +82,10 @@ test('should retry "maxRetry" max on HTTP code error', function (t) {
     nbTry++
     res.end('response')
   })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       maxRetry: 5
     }, function (err, res, data) {
       t.error(err)
@@ -107,10 +107,10 @@ test('should use read default.retryOnError to check if rock need to retry or not
     res.end('response')
   })
   const myInstance = rock.extend({ retryOnCode: [404] })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     myInstance({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       maxRetry: 5
     }, function (err, res, data) {
       t.error(err)
@@ -139,10 +139,10 @@ test('should retry even if there is a timeout', function (t) {
     }, 2000)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       timeout: 1000,
       maxRetry: 2
     }, function (err, res, data) {
@@ -172,10 +172,10 @@ test('should retry with POST even if there is a timeout. SHould keep headers on 
       res.end('response')
     }, 1000)
   })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       body: 'body message',
       method: 'POST',
       headers: { 'X-TEST': '145' },
@@ -207,9 +207,9 @@ test('should retry with postJSON function and accept to set a default global tim
     }, 1000)
   })
   const newInstance = rock.extend({ maxRetry: 2, timeout: 500 })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    newInstance.post('http://localhost:' + port + '/path', 'body message', function (err, res, data) {
+    newInstance.post('http://127.0.0.1:' + port + '/path', 'body message', function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'body message')
@@ -236,9 +236,9 @@ test('should retry if the error is coming from the server after receiving the fi
     }, 1000)
   })
   const newInstance = rock.extend({ maxRetry: 2 })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    newInstance.concat('http://localhost:' + port, function (err, res, data) {
+    newInstance.concat('http://127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(data.toString(), '123456789')
       server.close()
@@ -262,9 +262,9 @@ test('should retry if the socket is closed immediately on server side without de
     }
   })
   const newInstance = rock.extend({ maxRetry: 2 })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    newInstance.concat('http://localhost:' + port, function (err, res, data) {
+    newInstance.concat('http://127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(data.toString(), '123456789')
       server.close()
@@ -305,11 +305,11 @@ test('should destroy and restart a new INPUT stream on retry (error on server si
   })
   const newInstance = rock.extend({ maxRetry: 2 })
   const inputStreams = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: (opts) => {
         nbClientInputStreamCreated++
         const myReadStream = new Readable({
@@ -380,11 +380,11 @@ test('should destroy and restart a new INPUT stream on retry (error on input str
   })
   const newInstance = rock.extend({ maxRetry: 2 })
   const inputStreams = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: (opts) => {
         nbClientInputStreamCreated++
         const myReadStream = new Readable({
@@ -444,12 +444,12 @@ test('should accept finish/cleanup on INPUT stream even if there is a timeout an
   })
   server.setTimeout(3000) // NodeJS < 19 does not close keep-alive socket automatically
   const newInstance = rock.extend({ maxRetry: 2 })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     let nbClientFinishedInputStream = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: (opts) => {
         nbClientInputStreamCreated++
         const myReadStream = Readable.from(['yeah'], { objectMode: false })
@@ -486,11 +486,11 @@ test('should return an error and not retry if the INPUT stream is destroyed sinc
     res.end('realEnd')
   })
   const newInstance = rock.extend({ maxRetry: 2 })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: (opts) => {
         nbClientInputStreamCreated++
         const myReadStream = Readable.from(['yeah'], { objectMode: false })
@@ -553,13 +553,13 @@ test('should destroy and restart a new OUTPUT stream on retry (error on input st
   const newInstance = rock.extend({ maxRetry: 2 })
   const inputStreams = []
   const outputStreams = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     let nbClientOutputStreamCreated = 0
     let outputChunks = []
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       output: (opts, res) => {
         outputChunks = []
         nbClientOutputStreamCreated++
@@ -656,13 +656,13 @@ test('should destroy and restart a new OUTPUT stream on retry (error on input st
   const newInstance = rock.extend({ maxRetry: 2 })
   const inputStreams = []
   const outputStreams = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     let nbClientOutputStreamCreated = 0
     let outputChunks = []
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       output: (opts, res) => {
         outputChunks = []
         nbClientOutputStreamCreated++
@@ -734,11 +734,11 @@ test('should return an error and not retry if the OUTPUT stream is destroyed sin
     res.end('realEnd')
   })
   const newInstance = rock.extend({ maxRetry: 2 })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientOutpoutStreamCreated = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: 'yes',
       output: (opts, res) => {
         nbClientOutpoutStreamCreated++
@@ -807,13 +807,13 @@ test('should destroy and restart a new OUTPUT stream on retry (error on output s
   })
   const newInstance = rock.extend({ maxRetry: 2 })
   const inputStreams = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     let nbClientOutputStreamCreated = 0
     let outputChunks = []
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       output: (opts, res) => {
         outputChunks = []
         nbClientOutputStreamCreated++
@@ -904,11 +904,11 @@ test('should destroy and restart a new OUTPUT stream on retry (error on server s
   const outputStreams = []
   let nbClientOutputStreamCreated = 0
   let outputChunks = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: (opts) => {
         nbClientInputStreamCreated++
         const myReadStream = new Readable({
@@ -991,11 +991,11 @@ test('should accept using finished/cleanup function of NodeJS on OUTPUT stream o
   let nbClientOutputStreamCreated = 0
   let nbClientOutputFinishedStream = 0
   let outputChunks = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: (opts) => {
         nbClientInputStreamCreated++
         const myReadStream = new Readable({
@@ -1087,11 +1087,11 @@ test('should accept to use stream.on(error) on Writable stream (error on server 
   let nbClientOutputStreamCreated = 0
   let nbClientOutputErrorStream = 0
   let outputChunks = []
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     let nbClientInputStreamCreated = 0
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: (opts) => {
         nbClientInputStreamCreated++
         const myReadStream = new Readable({
@@ -1151,10 +1151,10 @@ function testRetryOnError (t, errorCode) {
       res.end('response')
     }, 1000)
   })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const request = rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       maxRetry: 2
     }, function (err, res, data) {
       t.error(err)
@@ -1180,10 +1180,10 @@ function testRetryOnHttpCode (t, httpCode, nbError) {
     nbError--
     res.end('response')
   })
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       maxRetry: 2
     }, function (err, res, data) {
       t.error(err)
@@ -1198,7 +1198,7 @@ function testRetryOnHttpCode (t, httpCode, nbError) {
 
 function serve (handler, ready) {
   const server = http.createServer(handler)
-  server.listen(0, () => ready('http://localhost:' + server.address().port, server))
+  server.listen(0, '127.0.0.1', () => ready('http://127.0.0.1:' + server.address().port, server))
 }
 function hangUp (req, res) { req.socket.destroy() } // the client gets ECONNRESET (socket hang up)
 
@@ -1400,6 +1400,355 @@ test('a response cut by the server (FIN or RST mid-body) is still retried', func
       t.equal(data.toString(), 'ok')
       t.equal(nb, 3)
       server.close()
+    })
+  })
+})
+
+// output returning the same destination, emitClose: false, 101 upgrade (5.3.2)
+
+test('a retry whose output() returns the same destination (destroyed by the failed attempt) calls back once with the error, mid-body or before the first byte', function (t) {
+  t.plan(2 * 6)
+  for (const writeFirst of [true, false]) {
+    let nb = 0
+    serve((req, res) => {
+      nb++
+      res.writeHead(200, { 'content-length': 100 })
+      if (writeFirst) res.write('PARTIAL')
+      else res.flushHeaders()
+      setTimeout(() => res.socket.destroy(), 20)
+    }, (url, server) => {
+      const destination = new PassThrough()
+      destination.on('error', () => {})
+      destination.resume()
+      let outputs = 0
+      let calls = 0
+      rock({ url, maxRetry: 2, retryDelay: 1, output: () => { outputs++; return destination } }, function (err, res) {
+        calls++
+        t.ok(err instanceof Error)
+        t.equal(res, undefined)
+        t.equal(outputs, 2, 'output() called again by the retry, its destroyed stream ends the request')
+        t.equal(nb, 2)
+        t.equal(destination.destroyed, true)
+        setTimeout(() => {
+          t.equal(calls, 1)
+          server.close()
+        }, 100)
+      })
+    })
+  }
+})
+
+test('a retry with a new output stream recovers from a reset before the first byte', function (t) {
+  t.plan(4)
+  let nb = 0
+  serve((req, res) => {
+    nb++
+    if (nb === 1) {
+      res.writeHead(200, { 'content-length': 100 })
+      res.flushHeaders()
+      return setTimeout(() => res.socket.destroy(), 20)
+    }
+    res.end('OK')
+  }, (url, server) => {
+    const outputs = []
+    rock({
+      url,
+      retryDelay: 1,
+      output: () => {
+        const chunks = []
+        outputs.push(chunks)
+        const w = new Writable({ write (chunk, enc, wcb) { chunks.push(chunk.toString()); wcb() } })
+        w.on('error', () => {})
+        return w
+      }
+    }, function (err, res) {
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(outputs.length, 2)
+      t.equal(outputs[1].join(''), 'OK')
+      server.close()
+    })
+  })
+})
+
+test('an output() returning a stream already destroyed without error ends the request with an error', function (t) {
+  t.plan(3)
+  serve((req, res) => res.end('DATA'), (url, server) => {
+    const w = new Writable({ write (chunk, enc, wcb) { wcb() } })
+    w.destroy()
+    rock({ url, output: () => w }, function (err, res) {
+      t.ok(err instanceof Error)
+      t.equal(err.message, 'opts.output returned a destroyed stream')
+      t.equal(res, undefined)
+      server.close()
+    })
+  })
+})
+
+test('an output stream with emitClose: false calls back once, after finish', function (t) {
+  t.plan(4)
+  serve((req, res) => res.end('DATA'), (url, server) => {
+    const chunks = []
+    let calls = 0
+    rock({ url, output: () => new Writable({ emitClose: false, write (chunk, enc, wcb) { chunks.push(chunk); wcb() } }) }, function (err, res) {
+      calls++
+      t.error(err)
+      t.equal(res.statusCode, 200)
+      t.equal(Buffer.concat(chunks).toString(), 'DATA')
+      setTimeout(() => {
+        t.equal(calls, 1)
+        server.close()
+      }, 50)
+    })
+  })
+})
+
+test('a 101 upgrade answer to a normal request calls back once with an error, the socket kept open or closed by the server', function (t) {
+  t.plan(2 * 4)
+  for (const keepOpen of [true, false]) {
+    let nb = 0
+    serve((req) => {
+      nb++
+      req.socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: x\r\nConnection: Upgrade\r\n\r\n')
+      if (keepOpen === false) req.socket.end()
+    }, (url, server) => {
+      let calls = 0
+      rock({ url, timeout: 300 }, function (err) {
+        calls++
+        t.ok(err instanceof Error)
+        t.equal(err.code, 'EUNEXPECTEDUPGRADE')
+        t.equal(nb, 1, 'not retried')
+        setTimeout(() => {
+          t.equal(calls, 1)
+          server.closeAllConnections?.()
+          server.close()
+        }, 100)
+      })
+    })
+  }
+})
+
+test('a retry whose output() returns the same destination calls back once with the error, even when the retry succeeds', function (t) {
+  t.plan(4)
+  let nb = 0
+  let outputs = 0
+  serve((req, res) => {
+    nb++
+    if (nb === 1) {
+      res.writeHead(200, { 'content-length': 100 })
+      res.flushHeaders()
+      return setTimeout(() => res.socket.destroy(), 20)
+    }
+    res.end('FULL')
+  }, (url, server) => {
+    const dest = new Writable({ write (chunk, enc, wcb) { wcb() } })
+    dest.on('error', () => {})
+    let calls = 0
+    rock({ url, retryDelay: 1, output: () => { outputs++; return dest } }, function (err) {
+      calls++
+      t.ok(err instanceof Error, 'the error of the cut attempt')
+      t.equal(outputs, 2)
+      setTimeout(() => {
+        t.equal(calls, 1, 'called back once, never waits for the close of the destroyed destination')
+        t.equal(nb, 2)
+        server.closeAllConnections?.()
+        server.close()
+      }, 100)
+    })
+  })
+})
+
+test('an output destroyed without error after end() and before finish calls back once, as before', function (t) {
+  t.plan(2)
+  serve((req, res) => res.end(Buffer.alloc(64 * 1024, 97)), (url, server) => {
+    const dest = new Writable({ highWaterMark: 1 << 30, write (chunk, enc, wcb) { setTimeout(wcb, 100) } })
+    let calls = 0
+    rock({ url, output: () => dest }, function (err) {
+      calls++
+      t.error(err)
+    })
+    setTimeout(() => dest.destroy(), 50)
+    setTimeout(() => {
+      t.equal(calls, 1)
+      server.closeAllConnections?.()
+      server.close()
+    }, 400)
+  })
+})
+
+test('an upgrade handled by the caller (its own "upgrade" listener) keeps its socket, as before', function (t) {
+  t.plan(3)
+  const server = http.createServer()
+  server.on('upgrade', (req, socket) => {
+    socket.on('error', () => {}) // the client destroys the socket: ECONNRESET on the server side (Node 16)
+    socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: x\r\nConnection: Upgrade\r\n\r\n')
+    socket.write('hi')
+  })
+  server.listen(0, '127.0.0.1', () => {
+    let calls = 0
+    const req = rock({ url: 'http://127.0.0.1:' + server.address().port, headers: { Connection: 'Upgrade', Upgrade: 'x' } }, () => { calls++ })
+    req.on('upgrade', (res, socket, head) => {
+      t.equal(res.statusCode, 101)
+      t.equal(socket.destroyed, false, 'the socket is given to the caller')
+      socket.destroy()
+      setTimeout(() => {
+        t.equal(calls, 0, 'rock-req leaves the request to the caller')
+        server.closeAllConnections?.()
+        server.close()
+      }, 50)
+    })
+  })
+})
+
+test('a CONNECT tunnel handled by the caller is neither retried nor called back, as before', function (t) {
+  t.plan(3)
+  let connects = 0
+  const proxy = http.createServer()
+  proxy.on('connect', (req, socket) => {
+    connects++
+    socket.write('HTTP/1.1 200 Connection Established\r\n\r\n')
+    socket.on('data', (d) => socket.write('echo:' + d))
+    socket.on('error', () => {})
+  })
+  proxy.listen(0, '127.0.0.1', () => {
+    let calls = 0
+    const req = rock({ method: 'CONNECT', hostname: '127.0.0.1', port: proxy.address().port, path: 'example.com:443' }, () => { calls++ })
+    req.on('connect', (res, socket) => {
+      t.equal(res.statusCode, 200)
+      socket.write('ping')
+      socket.once('data', () => {
+        socket.destroy()
+        setTimeout(() => {
+          t.equal(connects, 1, 'not retried')
+          t.equal(calls, 0, 'the tunnel belongs to the caller')
+          proxy.closeAllConnections?.()
+          proxy.close()
+        }, 100)
+      })
+    })
+  })
+})
+
+test('a request aborted synchronously by the caller calls back once with an error, not retried', function (t) {
+  t.plan(3)
+  let nb = 0
+  serve((req, res) => { nb++; res.end('x') }, (url, server) => {
+    let calls = 0
+    const req = rock({ url }, function (err) {
+      calls++
+      t.ok(err instanceof Error)
+    })
+    req.abort()
+    setTimeout(() => {
+      t.equal(calls, 1)
+      t.ok(nb <= 1, 'not retried')
+      server.closeAllConnections?.()
+      server.close()
+    }, 200)
+  })
+})
+
+/** A server whose first answer is cut after the headers (ECONNRESET, retried), the next ones answer 'FULL' */
+function serveCutOnce (ready) {
+  let nb = 0
+  serve((req, res) => {
+    nb++
+    if (nb === 1) {
+      res.writeHead(200, { 'content-length': 100 })
+      res.flushHeaders()
+      return setTimeout(() => res.socket.destroy(), 20)
+    }
+    res.end('FULL')
+  }, ready)
+}
+
+test('an output() returning, on a retry, a stream destroyed by the caller without error returns the error of the failed attempt', function (t) {
+  t.plan(3)
+  serveCutOnce((url, server) => {
+    let calls = 0
+    const output = () => {
+      calls++
+      const w = new Writable({ write (chunk, enc, wcb) { wcb() } })
+      if (calls === 2) w.destroy() // destroyed by the caller, no error of its own
+      return w
+    }
+    rock({ url, retryDelay: 1, output }, function (err) {
+      t.equal(err?.code, 'ECONNRESET', 'the network error of the first attempt')
+      t.equal(calls, 2)
+      setTimeout(() => {
+        t.pass('called back once')
+        server.closeAllConnections?.()
+        server.close()
+      }, 50)
+    })
+  })
+})
+
+test('an output() returning, on a retry, a stream destroyed with its own error returns that error, not the network error', function (t) {
+  t.plan(2)
+  serveCutOnce((url, server) => {
+    let calls = 0
+    const output = () => {
+      calls++
+      const w = new Writable({ write (chunk, enc, wcb) { wcb() } })
+      if (calls === 2) {
+        w.on('error', () => {})
+        w.destroy(new Error('disk full'))
+      }
+      return w
+    }
+    rock({ url, retryDelay: 1, output }, function (err) {
+      t.equal(err?.message, 'disk full')
+      t.equal(calls, 2)
+      server.closeAllConnections?.()
+      server.close()
+    })
+  })
+})
+
+test('an output() returning a destroyed object which is not a Node stream (no _writableState): the error of the failed attempt on a retry, else a generic error', function (t) {
+  t.plan(4)
+  const fake = () => ({ destroyed: true, on () { return this } })
+  serve((req, res) => res.end('DATA'), (url, server) => {
+    rock({ url, output: fake }, function (err) {
+      t.equal(err?.message, 'opts.output returned a destroyed stream', 'first attempt: no previous error')
+      serveCutOnce((url2, server2) => {
+        let calls = 0
+        rock({ url: url2, retryDelay: 1, output: () => (++calls === 1 ? new Writable({ write (chunk, enc, wcb) { wcb() } }) : fake()) }, function (err2) {
+          t.equal(err2?.code, 'ECONNRESET', 'retry: the network error of the failed attempt')
+          t.equal(calls, 2)
+          t.pass('called back once')
+          server2.closeAllConnections?.()
+          server2.close()
+          server.close()
+        })
+      })
+    })
+  })
+})
+
+test('an output() returning a destroyed stream releases a body still uploading (no file descriptor left open)', function (t) {
+  t.plan(3)
+  const server = http.createServer((req, res) => res.end('DATA')) // answers before reading the body
+  server.listen(0, '127.0.0.1', () => {
+    let body = null
+    const createBody = () => { // a streamed upload which never ends by itself (like a large file)
+      body = new Readable({ read () {} })
+      body.push('first chunk')
+      return body
+    }
+    const w = new Writable({ write (chunk, enc, wcb) { wcb() } })
+    w.destroy()
+    let calls = 0
+    rock({ url: 'http://127.0.0.1:' + server.address().port, method: 'POST', body: createBody, output: () => w }, function (err) {
+      calls++
+      t.equal(err?.message, 'opts.output returned a destroyed stream')
+      setTimeout(() => {
+        t.equal(body.destroyed, true, 'the upload stream is destroyed')
+        t.equal(calls, 1)
+        server.closeAllConnections?.()
+        server.close()
+      }, 50)
     })
   })
 })

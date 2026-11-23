@@ -14,10 +14,10 @@ test('custom headers', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     rock({
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       headers: {
         'custom-header': 'custom-value'
       }
@@ -38,9 +38,9 @@ test('gzip response', function (t) {
     str('response').pipe(zlib.createGzip()).pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock('http://localhost:' + port, function (err, res, data) {
+    rock('http://127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'response')
@@ -63,9 +63,9 @@ test('bad gzip response', function (t) {
     })
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock('http://localhost:' + port, function (err, res, data) {
+    rock('http://127.0.0.1:' + port, function (err, res, data) {
       t.ok(err instanceof Error)
       server.close()
     })
@@ -81,9 +81,9 @@ test('deflate response', function (t) {
     str('response').pipe(zlib.createDeflate()).pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock('http://localhost:' + port, function (err, res, data) {
+    rock('http://127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200) // statusCode still works on inflate stream
       t.equal(data.toString(), 'response')
@@ -101,9 +101,9 @@ test('br response', function (t) {
     str('response').pipe(zlib.createBrotliCompress()).pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock('http://localhost:' + port, function (err, res, data) {
+    rock('http://127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200) // statusCode still works on inflate stream
       t.equal(data.toString(), 'response')
@@ -122,7 +122,7 @@ Object.keys(compressors).forEach(function (encoding) {
       res.setHeader('content-encoding', encoding)
       res.end(compressed)
     })
-    server.listen(0, function () { cb(server, 'http://localhost:' + server.address().port) })
+    server.listen(0, '127.0.0.1', function () { cb(server, 'http://127.0.0.1:' + server.address().port) })
   }
 
   test(encoding + ' response with decompress = true', function (t) {
@@ -187,7 +187,7 @@ function startEncodedServer (statusCode, encoding, cb) {
     res.writeHead(statusCode, { 'content-encoding': encoding, 'content-length': noBody ? 0 : gzipped.length })
     res.end(req.method === 'HEAD' || noBody ? undefined : gzipped)
   })
-  server.listen(0, function () { cb(server, 'http://localhost:' + server.address().port) })
+  server.listen(0, '127.0.0.1', function () { cb(server, 'http://127.0.0.1:' + server.address().port) })
 }
 
 ;[204, 205, 304].forEach(function (statusCode) {
@@ -224,8 +224,8 @@ test('206 partial response with content-encoding gzip is returned raw (a range o
     res.writeHead(206, { 'content-encoding': 'gzip', 'content-range': 'bytes 10-19/' + gzipped.length, 'content-length': part.length })
     res.end(part)
   })
-  server.listen(0, function () {
-    rock({ url: 'http://localhost:' + server.address().port, headers: { range: 'bytes=10-19' } }, function (err, res, data) {
+  server.listen(0, '127.0.0.1', function () {
+    rock({ url: 'http://127.0.0.1:' + server.address().port, headers: { range: 'bytes=10-19' } }, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 206)
       t.equal(res.headers['content-encoding'], 'gzip')
@@ -251,8 +251,8 @@ test('range request header: send accept-encoding identity only if accept-encodin
   const server = http.createServer(function (req, res) {
     res.end(req.headers['accept-encoding'])
   })
-  server.listen(0, function () {
-    const url = 'http://localhost:' + server.address().port
+  server.listen(0, '127.0.0.1', function () {
+    const url = 'http://127.0.0.1:' + server.address().port
     rock({ url, headers: { Range: 'bytes=0-1' } }, function (err, res, data) {
       t.error(err)
       t.equal(data.toString(), 'identity')

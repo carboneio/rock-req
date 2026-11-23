@@ -13,7 +13,7 @@ function startServer (handler, cb) {
     socket.on('close', function () { stats.closed++ })
   })
   server.stop = function () { server.close(); sockets.forEach(s => s.destroy()) } // Node < 18.2 has no closeAllConnections
-  server.listen(0, function () { cb(server, 'http://localhost:' + server.address().port, stats) })
+  server.listen(0, '127.0.0.1', function () { cb(server, 'http://127.0.0.1:' + server.address().port, stats) })
 }
 
 test('keepAliveTimeout and decompress are not in defaults (undefined = 5000ms and true), not copied in each request', function (t) {

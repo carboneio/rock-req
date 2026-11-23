@@ -12,10 +12,10 @@ test('rock.concat (post, stream body, and json option)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: () => str('{"a": "b"}'),
       method: 'POST',
       json: true
@@ -33,7 +33,7 @@ test('rock.concat (post, stream body, and json option)', function (t) {
 test('should return an error if the input stream is not created by a function', function (t) {
   t.plan(2)
   const opts = {
-    url: 'http://localhost:',
+    url: 'http://127.0.0.1:',
     body: str('{"a": "b"}'),
     method: 'POST',
     json: true
@@ -48,7 +48,7 @@ test('should return an error if the output stream is not created by a function',
   t.plan(2)
   const chunks = []
   const opts = {
-    url: 'http://localhost',
+    url: 'http://127.0.0.1',
     output: new Writable({ write (chunk, enc, wcb) { chunks.push(chunk); wcb() } }),
     method: 'GET'
   }
@@ -61,7 +61,7 @@ test('should return an error if the output stream is not created by a function',
 test('should return an error if the output stream is something else than a function', function (t) {
   t.plan(2)
   const opts = {
-    url: 'http://localhost',
+    url: 'http://127.0.0.1',
     output: 'sdsd',
     method: 'GET'
   }
@@ -78,9 +78,9 @@ test('rock.concat', function (t) {
     res.end('blah blah blah')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock.concat('http://localhost:' + port, function (err, res, data) {
+    rock.concat('http://127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.ok(Buffer.isBuffer(data), '`data` is type buffer')
@@ -100,9 +100,9 @@ test('should concat multiple parts', function (t) {
     }, 1000)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock.concat('http://localhost:' + port, function (err, res, data) {
+    rock.concat('http://127.0.0.1:' + port, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.ok(Buffer.isBuffer(data), '`data` is type buffer')
@@ -119,10 +119,10 @@ test('rock.concat json', function (t) {
     res.end('{"message":"response"}')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       json: true
     }
     rock.concat(opts, function (err, res, data) {
@@ -141,10 +141,10 @@ test('rock.concat json error', function (t) {
     res.end('not json')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port + '/path',
+      url: 'http://127.0.0.1:' + port + '/path',
       json: true
     }
     rock.concat(opts, function (err, res, data) {

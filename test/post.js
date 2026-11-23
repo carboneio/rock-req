@@ -13,10 +13,10 @@ test('post (text body)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: 'this is the body'
     }
     rock.post(opts, function (err, res, data) {
@@ -37,10 +37,10 @@ test('post (utf-8 text body)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: 'jedan dva tri četiri'
     }
     rock.post(opts, function (err, res, data) {
@@ -61,10 +61,10 @@ test('post (buffer body)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: Buffer.from('this is the body')
     }
     rock.post(opts, function (err, res, data) {
@@ -86,10 +86,10 @@ test('post (stream body)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: () => str('this is the body')
     }
     rock.post(opts, function (err, res, data) {
@@ -113,9 +113,9 @@ test('post (stream body) with second function parameter', function (t) {
 
   const _stream = () => str('this is the body')
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    rock.post('http://localhost:' + port, _stream, function (err, res, data) {
+    rock.post('http://127.0.0.1:' + port, _stream, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.toString(), 'this is the body')
@@ -134,11 +134,11 @@ test('post (json body)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       method: 'POST',
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: {
         message: 'this is the body'
       },
@@ -163,11 +163,11 @@ test('post (json body, jsonResponse false)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       method: 'POST',
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: {
         message: 'this is the body'
       },
@@ -193,11 +193,11 @@ test('post with empty JSON response should not crash', function (t) {
     res.end()
   })
   server.setTimeout(1000) // NodeJS < 19 does not close keep-alive socket automatically
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       method: 'POST',
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       body: {
         message: 'this is the body'
       },
@@ -222,12 +222,12 @@ test('should accept postJSON as a shortcut', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       message: 'this is the body'
     }
-    rock.postJSON('http://localhost:' + port, opts, function (err, res, data) {
+    rock.postJSON('http://127.0.0.1:' + port, opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.message, 'this is the body')
@@ -246,12 +246,12 @@ test('should accept putJSON as a shortcut', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       message: 'this is the body'
     }
-    rock.putJSON('http://localhost:' + port, opts, function (err, res, data) {
+    rock.putJSON('http://127.0.0.1:' + port, opts, function (err, res, data) {
       t.error(err)
       t.equal(res.statusCode, 200)
       t.equal(data.message, 'this is the body')
@@ -273,11 +273,11 @@ test('post (form, object)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       method: 'POST',
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       form: formData
     }
     rock.concat(opts, function (err, res, data) {
@@ -301,11 +301,11 @@ test('post (form, querystring)', function (t) {
     req.pipe(res)
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
     const opts = {
       method: 'POST',
-      url: 'http://localhost:' + port,
+      url: 'http://127.0.0.1:' + port,
       form: formData
     }
     rock.concat(opts, function (err, res, data) {

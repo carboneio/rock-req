@@ -14,10 +14,10 @@ test('simple rock.promises.getJSON', async function (t) {
   })
 
   await new Promise((resolve) => {
-    server.listen(0, async function () {
+    server.listen(0, '127.0.0.1', async function () {
       const port = server.address().port
       const opts = {
-        url: 'http://localhost:' + port + '/path',
+        url: 'http://127.0.0.1:' + port + '/path',
         json: true
       }
       const { response, data } = await rock.promises.getJSON(opts)
@@ -42,12 +42,12 @@ test('post rock.promises.postJSON', async function (t) {
   })
 
   await new Promise((resolve) => {
-    server.listen(0, async function () {
+    server.listen(0, '127.0.0.1', async function () {
       const port = server.address().port
       const body = {
         message: 'this is the body'
       };
-      const { response, data } = await rock.promises.postJSON('http://localhost:' + port, body)
+      const { response, data } = await rock.promises.postJSON('http://127.0.0.1:' + port, body)
       t.equal(response.statusCode, 200)
       t.equal(data.message, 'this is the body')
       server.close()

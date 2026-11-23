@@ -10,9 +10,9 @@ test('access `req` object', function (t) {
     res.end('response')
   })
 
-  server.listen(0, function () {
+  server.listen(0, '127.0.0.1', function () {
     const port = server.address().port
-    const req = rock('http://localhost:' + port, function (err, res) {
+    const req = rock('http://127.0.0.1:' + port, function (err, res) {
       t.error(err)
       res.resume() // discard data
       server.close()
