@@ -83,7 +83,7 @@ rock({ method: 'PUT' /* PUT, ... */, url: 'http://ex.com', body: { id : 123 }, j
 New in v5.2.0
 
 ```js
-const { res,  data } = await rock.promises.post('http://ex.com', 'POST body');
+const { response, data } = await rock.promises.post('http://ex.com', 'POST body');
 ```
 
 All these function are available:
@@ -102,6 +102,24 @@ rock.promises.putJSON(optsOrURL, body)
 rock.promises.patchJSON(optsOrURL, body)
 rock.promises.deleteJSON(optsOrURL, body)
 ```
+
+With promises, pass the body as the second argument: a `body` inside the options is ignored.
+
+
+### TypeScript
+
+New in v5.3.2. Definitions are included (they need `@types/node`).
+
+```ts
+import rock = require('rock-req')  // or `import rock from 'rock-req'` with esModuleInterop, or module node16/nodenext
+import type { Options } from 'rock-req'
+
+const opts: Options = { url: 'http://ex.com', maxRetry: 2 }
+const { data } = await rock.promises.getJSON<{ id: number }>(opts) // data: { id: number }
+rock.get('http://ex.com', (err, res, data) => {}) // data: Buffer
+```
+
+Use the default import: named imports (`import { get } from 'rock-req'`) are not supported in ESM.
 
 
 ### All options:
@@ -279,7 +297,7 @@ rock(opts, function (err, res, data) {} );
 Change default parameters globally (not recommended), or create a new instance with specific paramaters (see below)
 
 ```js
-rock.defaults = {
+Object.assign(rock.defaults, { // do not replace the object: rock.defaults = {...} has no effect
   headers           : { 'accept-encoding': 'gzip, deflate, br' },
   maxRedirects      : 10,
   maxRetry          : 1,
@@ -316,7 +334,7 @@ rock.defaults = {
     // opts must be returned
     return opts;
   },
-}
+})
 ```
 
 Create a new instance with specific parameters instead of modifying global `rock.defaults`.
@@ -590,5 +608,4 @@ Rock-req is a fork of [simple-get](https://github.com/feross/simple-get)
 ## TODO:
 
 - [ ] replace deprecated `url.parse` by `new URL` but new URL is slower than url.parse. Let's see if Node 20 LTS is faster
-- [ ] typescript type ?
 

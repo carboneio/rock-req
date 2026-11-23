@@ -53,6 +53,6 @@
   "scripts": {
     "test": "tape test/*.js",
     "standard": "node_modules/.bin/standard",
-    "test:types": "tsc --noEmit --strict --types node --module commonjs --target es2022 test/types.ts"
+    "test:types": "tsc --noEmit --strict --types node --module node16 --target es2022 test/types.ts && tsc --noEmit --strict --types node --module nodenext --target es2022 test/types-esm.mts"
   }
 }
