@@ -34,6 +34,12 @@ rock.post(url, () => Readable.from(['a']), () => {})
 function handler (err: Error | null, res: IncomingMessage, data: Buffer): void { void [err, res, data] }
 rock.get(url, handler)
 
+// a plain shortcut with json: true gives the parsed JSON (#7)
+rock.get({ url, json: true }, (err, res, data) => { const d: Equals<typeof data, any> = true; return d })
+rock.get<{ id: number }>({ url, json: true }, (err, res, data) => { const d: Equals<typeof data, { id: number }> = true; return d })
+rock.post({ url, json: true }, { a: 1 }, () => {})
+rock.get({ url, json: false }, (err, res, data) => { const d: Equals<typeof data, Buffer> = true; return d })
+
 // JSON shortcuts: data is the parsed JSON, typed with a generic
 rock.postJSON(url, { a: 1 }, (err, res, data) => { const d: Equals<typeof data, any> = true; return d })
 rock.getJSON<{ id: number }>(url, (err, res, data) => { const d: Equals<typeof data, { id: number }> = true; return d })
@@ -88,6 +94,10 @@ async function promises (): Promise<void> {
   const anyJson = await rock.promises.postJSON(url, { a: 1 })
   const a: Equals<typeof anyJson.data, any> = true
   await rock.promises.post(url, 'body')
+  await rock.promises.post({ url, body: 'in options' })
+  const plainJson = await rock.promises.get<{ id: number }>({ url, json: true })
+  const p: Equals<typeof plainJson.data, { id: number }> = true
+  void p
   void [r, t, a]
 }
 void promises
@@ -122,17 +132,27 @@ rock.post(url, { a: 1 }, () => {})
 rock({ url, headers: ['a', 'b'] }, () => {})
 // @ts-expect-error the shortcut sets the method
 rock.get({ url, method: 'POST' }, () => {})
-// @ts-expect-error the shortcut sets json
-rock.get({ url, json: true }, () => {})
+// @ts-expect-error a JSON shortcut sets json
+rock.getJSON({ url, json: false }, () => {})
 // @ts-expect-error a plain shortcut gives a Buffer, not a typed object
 rock.get(url, (err: Error | null, res: IncomingMessage, data: { id: number }) => [err, res, data])
-// @ts-expect-error the promise body must be the second argument
-void rock.promises.post({ url, body: 'ignored' })
 // @ts-expect-error the defaults object can not be replaced
 rock.defaults = rock.defaults
 // @ts-expect-error extend checks its options
 rock.extend({ maxRetry: '1' })
 // @ts-expect-error keepAliveDuration is read when the instance is created
 rock.defaults.keepAliveDuration = 0
-// @ts-expect-error an agent must be an Agent or false
-rock({ url, agent: true }, () => {})
+rock({ url, agent: true }, () => {}) // like Node: the rock-req agent
+// @ts-expect-error an agent must be an Agent or a boolean
+rock({ url, agent: 'x' }, () => {})
+// @ts-expect-error an object body needs json, also in the options
+void rock.promises.post({ url, body: { a: 1 } })
+// @ts-expect-error an object body needs json, also in the options
+rock.post({ url, body: { a: 1 } }, () => {})
+
+// a rejected promise carries the response and the raw body, like the callback
+rock.promises.getJSON(url).catch((err: rock.RockError) => {
+  const r: Equals<typeof err.response, IncomingMessage | undefined> = true
+  const d: Equals<typeof err.data, Buffer | undefined> = true
+  return [r, d, err.response?.statusCode]
+})

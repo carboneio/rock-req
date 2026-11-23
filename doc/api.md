@@ -62,6 +62,8 @@ rock({ method: 'POST' /* PUT, PATCH, DELETE */, url : 'http://ex.com', body : 'P
 
 Automatically serialize/deserialize request and response with JSON with `getJSON`, `putJSON`, `postJSON`, `deleteJSON`, ...
 
+`get`, `post`, ... keep the `json` option of the request or of the instance (`rock.extend({ json: true })`). `getJSON`, `postJSON`, ... always use JSON.
+
 ```js
 rock.putJSON('http://ex.com', { id : 123 }, (err, res, data) => {
   console.log(data) // already JSON.parsed
@@ -103,7 +105,9 @@ rock.promises.patchJSON(optsOrURL, body)
 rock.promises.deleteJSON(optsOrURL, body)
 ```
 
-With promises, pass the body as the second argument: a `body` inside the options is ignored.
+The body can be given in the options or as the second argument, which wins unless it is `undefined`.
+
+A promise is rejected with the error of the callback, or with the error thrown by an invalid first request. When the callback also gets the response (an invalid JSON response), the error has `err.response` and `err.data` (the raw body).
 
 
 ### TypeScript
@@ -166,9 +170,9 @@ Errors happening later (network, redirects, retries) are always returned in the 
   - `protocol <string>` Protocol to use. Default: 'http:'.
   - `setHost <boolean>`: Specifies whether or not to automatically add the Host header. Defaults to true.
   - `agent <http.Agent> | <boolean>` Controls Agent behavior. Possible values:
-    - `undefined` (default): use http.globalAgent for this host and port.
-    - `Agent object`: explicitly use the passed in Agent.
-    - `false` causes a new Agent with default values to be used.
+    - `undefined` (default), `false` or any value which is not an agent: use the keep-alive agent of rock-req (Node's global agent with `keepAliveDuration: 0`).
+    - `Agent object` with a `protocol` (`http.Agent`, `https.Agent`): used for the requests of its protocol. On a request or a redirect of the other protocol, it is replaced by the agent of rock-req for the rest of the request, without error (unlike Node, which throws): a proxy is then bypassed.
+    - `Agent object` without `protocol` (a `tunnel` agent): see [Proxies](#proxies).
 
 
 ### Input Stream
@@ -371,7 +375,7 @@ myInstance.get('http://example.com', function (err, res, data) {})
 
 For example, you can dynamically change the http Agent to use a another proxy on each request.
 Be careful, in this case, you must provide the right http/https Agent if there is a redirection from http to https.
-Otherwise, rock-req automatically replaces your Agent with the correct one if the protocol changes after redirection.
+Otherwise, an agent with a `protocol` is replaced by the agent of rock-req (no proxy) if the protocol changes after a redirection, and a `tunnel` agent ends the request with `ERR_INVALID_PROTOCOL`. Choose the agent from `opts.protocol` in `beforeRequest`.
 
 Or, you can rewrite the URL if you want to use [HAProxy as a forward proxy](https://www.haproxy.com/user-spotlight-series/haproxy-as-egress-controller/).
 
@@ -448,6 +452,12 @@ const opts = {
 
 rock(opts, function (err, res, data) {})
 ```
+
+A `tunnel` agent has no `protocol`: rock-req uses it for every request, redirects and retries included, so a request never bypasses the proxy.
+Use the agent made for the protocol of the URL: `httpOverHttp` or `httpOverHttps` for `http` URLs, `httpsOverHttp` or `httpsOverHttps` for `https` URLs (rock-req reads it from `defaultPort`: 443 means `https`).
+A request whose `protocol` (or `url`) is the other one is never sent: it throws `ERR_INVALID_PROTOCOL` at once (a promise is rejected), or returns it in the callback on a redirect (not retried). Without `url` or `protocol`, the agent is used as is.
+
+Other proxy agents have a `protocol`: on a request of the other protocol, rock-req replaces them by its own agent, so the proxy is bypassed without error. Those based on `agent-base` (`https-proxy-agent`, `proxy-agent`...) report `http:`, so `https` URLs are sent directly, without the proxy: use `tunnel`.
 
 ### Cookies
 

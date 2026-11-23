@@ -7,6 +7,10 @@ declare namespace rock {
   /** An error of the request. `code` is set on network errors (`ECONNRESET`, `ETIMEDOUT`, `EUNEXPECTEDUPGRADE`...) */
   interface RockError extends Error {
     code?: string
+    /** Promises only: the response when the error comes after it (a JSON parse error), like the callback `res` */
+    response?: IncomingMessage
+    /** Promises only: the raw body (Buffer) when `response` is set, like the callback `data` */
+    data?: Buffer
   }
 
   /**
@@ -56,8 +60,8 @@ declare namespace rock {
     retryOnError?: string[]
     /** Called on each request, redirect and retry. Must return the options */
     beforeRequest?: (opts: ResolvedOptions) => Options
-    /** Used only if `agent.protocol` matches the request protocol ('http:' or 'https:'). Otherwise, or if false, rock-req uses its own keep-alive agent */
-    agent?: Agent | false
+    /** The caller's agent. An agent without `protocol` (a `tunnel` agent) is used for every request; its protocol is `https:` if `defaultPort` is 443, else `http:`, and a request of the other protocol throws `ERR_INVALID_PROTOCOL` (in the callback on a redirect). An agent with a `protocol` is replaced by the rock-req agent on a request of the other protocol. Any other value: the rock-req agent */
+    agent?: Agent | boolean
     /** Set by rock-req: retries left (already decremented on a retry) */
     remainingRetry?: number
     /** Set by rock-req: redirects left */
@@ -107,30 +111,39 @@ declare namespace rock {
     readonly sensitiveHeaders?: string[]
   }
 
-  /** Options of the shortcuts: `method` and `json` are set by the shortcut */
-  type ShortcutOptions = Omit<Options, 'method' | 'json'>
+  /** Options of `get`, `post`...: `method` is set by the shortcut */
+  type ShortcutOptions = Omit<Options, 'method'>
+  /** Options of `get`, `post`... without `json: true`: the body can not be an object */
+  type PlainShortcutOptions = Omit<ShortcutOptions, 'body'> & { body?: RawBody }
+  /** Options of `getJSON`, `postJSON`...: `method` and `json` are set by the shortcut */
+  type JsonShortcutOptions = Omit<Options, 'method' | 'json'>
 
   interface Response<T> {
     response: IncomingMessage
     data: T
   }
 
-  /** `get`, `post`... : `data` is always a Buffer */
+  /** `get`, `post`...: `data` is a Buffer, or the parsed JSON with `json: true`. `data` is typed as the parsed JSON only when `json` is the literal `true`: with a `json` variable or an instance created with `json: true`, use the `*JSON` shortcuts */
   interface Method {
-    (opts: ShortcutOptions | string, cb: Callback<Buffer>): ClientRequest
-    (opts: ShortcutOptions | string, body: RawBody, cb: Callback<Buffer>): ClientRequest
+    <T = any>(opts: ShortcutOptions & { json: true }, cb: Callback<T>): ClientRequest
+    <T = any>(opts: ShortcutOptions & { json: true }, body: JsonBody, cb: Callback<T>): ClientRequest
+    (opts: PlainShortcutOptions | string, cb: Callback<Buffer>): ClientRequest
+    (opts: PlainShortcutOptions | string, body: RawBody, cb: Callback<Buffer>): ClientRequest
   }
 
-  /** `getJSON`, `postJSON`... : `data` is the parsed JSON (`null` if the body is empty) */
+  /** `getJSON`, `postJSON`...: `data` is the parsed JSON (`null` if the body is empty) */
   interface JsonMethod {
-    <T = any>(opts: ShortcutOptions | string, cb: Callback<T>): ClientRequest
-    <T = any>(opts: ShortcutOptions | string, body: JsonBody, cb: Callback<T>): ClientRequest
+    <T = any>(opts: JsonShortcutOptions | string, cb: Callback<T>): ClientRequest
+    <T = any>(opts: JsonShortcutOptions | string, body: JsonBody, cb: Callback<T>): ClientRequest
   }
 
-  /** Options of the promise shortcuts: the body must be the second argument (a `body` inside the options would be ignored) */
-  type PromiseOptions = Omit<ShortcutOptions, 'body'>
-  type PromiseMethod = (opts: PromiseOptions | string, body?: RawBody) => Promise<Response<Buffer>>
-  type PromiseJsonMethod = <T = any>(opts: PromiseOptions | string, body?: JsonBody) => Promise<Response<T>>
+  /** The body can be in the options or the second argument, which wins unless it is `undefined` */
+  interface PromiseMethod {
+    <T = any>(opts: ShortcutOptions & { json: true }, body?: JsonBody): Promise<Response<T>>
+    (opts: PlainShortcutOptions | string, body?: RawBody): Promise<Response<Buffer>>
+  }
+  /** The body can be in the options or the second argument, which wins unless it is `undefined` */
+  type PromiseJsonMethod = <T = any>(opts: JsonShortcutOptions | string, body?: JsonBody) => Promise<Response<T>>
 
   interface Rock {
     /** `data` is a Buffer, or the parsed JSON with `json: true` */

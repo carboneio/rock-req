@@ -75,7 +75,7 @@ function extend (defaultOptions = {}) {
 
   function rock (opts, directBody, cb) {
     if (typeof opts === 'string') opts = { url: opts }
-    if (!cb) { cb = directBody } else { opts.body = directBody }
+    if (!cb) { cb = directBody } else if (directBody !== undefined) { opts.body = directBody }
     const headers = cloneLowerCase(opts.headers)
     if (headers.range !== undefined && headers['accept-encoding'] === undefined) headers['accept-encoding'] = 'identity' // a range of the compressed body cannot be decompressed
     opts.headers = applyDefault(headers, _default.headers)
@@ -107,7 +107,9 @@ function extend (defaultOptions = {}) {
     if (opts.output && (isStream(opts.output) || !isFnStream(opts.output))) return cb(new Error('opts.output must be a function returning a Writable stream. RTFM'))
     if (opts.json) opts.headers.accept = 'application/json'
     if (opts.method) opts.method = opts.method.toUpperCase()
-    if (!opts.agent || opts.agent.protocol !== opts.protocol) opts.agent = (opts.protocol === 'https:' ? agents[1] : agents[0])
+    const requestProtocol = opts.protocol || 'http:'
+    if (typeof opts.agent?.addRequest !== 'function' || (opts.agent.protocol ?? requestProtocol) !== requestProtocol) opts.agent = (requestProtocol === 'https:' ? agents[1] : agents[0])
+    else if (opts.protocol && (opts.agent.protocol ?? (opts.agent.defaultPort === 443 ? 'https:' : 'http:')) !== opts.protocol) throw Object.assign(new Error(`Protocol "${opts.protocol}" not supported by the agent`), { code: 'ERR_INVALID_PROTOCOL' })
 
     const protocol = opts.protocol === 'https:' ? https : http // Support http/https urls
     const chunks = []
@@ -224,13 +226,13 @@ function extend (defaultOptions = {}) {
     rock[method] = (opts, body, cb) => {
       if (typeof opts === 'string') opts = { url: opts }
       opts.method = methodShortcut
-      opts.json = jsonShortcut
+      if (jsonShortcut === true) opts.json = true
       return rock(opts, body, cb)
     }
     rock.promises[method] = (opts, body) => {
       return new Promise((resolve, reject) => {
         rock[method](opts, body, (err, response, data) => {
-          if (err) return reject(err)
+          if (err) return reject(response === undefined ? err : Object.assign(err, { response, data }))
           resolve({ response, data })
         })
       })

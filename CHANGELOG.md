@@ -1,5 +1,11 @@
 # Rock-req
 
+### 5.4.0
+  - Security fix: a `tunnel` proxy agent (no `protocol`) was ignored for a request with a `url` or a `protocol`, so it bypassed the proxy without any error. It is now used for every request, redirect and retry. Its protocol is read from `defaultPort` (443 means `https`): a request of the other protocol is never sent, it throws `ERR_INVALID_PROTOCOL` (a promise is rejected; in the callback on a redirect, not retried). An `http.Agent` given with `hostname` and `port` (without `url` or `protocol`) is now used too.
+  - Fix: `get`, `post`, ... ignored `json: true`, given in the options or by `extend` (#7). They now keep it. `getJSON`, `postJSON`, ... still always use JSON. Breaking if you passed `json: true` to `get`, `post`, ..., or used them on an instance created with `extend({ json: true })`, and expected a Buffer: they now send `accept: application/json`, stringify an object body and parse the response (an invalid JSON response is an error). As the shortcuts set their options on the object you give, reusing it after a `getJSON` keeps `json: true`.
+  - Fix: the promises (`rock.promises.post({ url, body })`) dropped a `body` given in the options, like `rock.post(opts, undefined, cb)`. The body can now be in the options or the second argument, which wins unless it is `undefined`.
+  - Fix: a rejected promise lost the response and the body that the callback gets (an invalid JSON response). The error now has `err.response` and `err.data`, like `res` and `data` of the callback.
+
 ### 5.3.2
   - Add: TypeScript definitions (#3). Use `import rock = require('rock-req')`, or `import rock from 'rock-req'` with `esModuleInterop` or module `node16`/`nodenext`. Named ESM imports are not supported.
   - Fix: the callback never fired when `output()` returned the same stream on every retry. After a network error, the retry wrote into the stream destroyed by the failed attempt and waited forever. Now, if `output()` returns a destroyed stream, the request stops right away and the callback gets the error. Returning a new stream on each call, as documented, still works as before.
