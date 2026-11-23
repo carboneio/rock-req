@@ -60,7 +60,7 @@ declare namespace rock {
     retryOnError?: string[]
     /** Called on each request, redirect and retry. Must return the options */
     beforeRequest?: (opts: ResolvedOptions) => Options
-    /** The caller's agent. An agent without `protocol` (a `tunnel` agent) is used for every request; its protocol is `https:` if `defaultPort` is 443, else `http:`, and a request of the other protocol throws `ERR_INVALID_PROTOCOL` (in the callback on a redirect). An agent with a `protocol` is replaced by the rock-req agent on a request of the other protocol. Any other value: the rock-req agent */
+    /** The caller's agent. An agent without `protocol` is used for every request; its protocol is `https:` if `defaultPort` is 443, else `http:`, and a request of the other protocol throws `ERR_INVALID_PROTOCOL` (in the callback on a redirect). An agent with a `protocol` is replaced by the rock-req agent on a request of the other protocol. Any other value: the rock-req agent */
     agent?: Agent | boolean
     /** Set by rock-req: retries left (already decremented on a retry) */
     remainingRetry?: number
