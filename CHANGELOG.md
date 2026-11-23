@@ -1,6 +1,7 @@
 # Rock-req
 
 ### 5.3.2
+  - Add: TypeScript definitions (#3). They work with `import rock = require('rock-req')`, `import rock from 'rock-req'` and the promises interface.
   - Fix: the callback never fired when `output()` returned the same stream on every retry. After a network error, the retry wrote into the stream destroyed by the failed attempt and waited forever. Now, if `output()` returns a destroyed stream, the request stops right away and the callback gets the error. Returning a new stream on each call, as documented, still works as before.
   - Fix: the callback never fired when the output stream was created with `emitClose: false`. It now fires on `finish`.
   - Fix: the callback never fired when a server answered `101 Switching Protocols` to a normal request, even with a `timeout`. You now get an `EUNEXPECTEDUPGRADE` error, which is not retried. If you listen to `req.on('upgrade')` yourself, you still get the socket.

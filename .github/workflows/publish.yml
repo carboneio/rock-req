@@ -30,6 +30,8 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm install
       - run: npm test
+      - run: npm run test:types
+        if: matrix.node != 16 # TypeScript 7 does not start on Node 16
 
   publish:
     needs: test
